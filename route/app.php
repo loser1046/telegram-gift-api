@@ -3,7 +3,7 @@
 use think\facade\Route;
 use app\middleware\ApiCheckToken;
 
-Route::group('api/v1', function () {
+// Route::group('api/v1', function () {
 
 
     Route::group( function () {
@@ -22,7 +22,7 @@ Route::group('api/v1', function () {
         Route::get('/gift/createInvoiceLink', 'Gift/createInvoiceLink');
         Route::post('/tgStar/checkPayment', 'TgStar/checkPayment');
     })->middleware(ApiCheckToken::class, true);
-});
+// });
 
 
 Route::miss(function () {
