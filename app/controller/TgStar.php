@@ -53,6 +53,7 @@ class TgStar extends BaseController
         Log::debug($logs);
 
         if (!$this->tgStarService->validateTelegramCallback($headers)) {
+            Log::debug("签名验证失败");
             return fail('Invalid secret token');
         }
 

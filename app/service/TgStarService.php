@@ -30,6 +30,7 @@ class TgStarService extends BaseService
         $transaction_id = $preCheckoutQuery['invoice_payload'];
         $transaction_info = $this->model->where('transaction_id', $transaction_id)->findOrEmpty()->toArray();
         if (empty($transaction_info)) {
+            Log::debug("订单不存在");
             $this->telegram->answerPreCheckoutQuery($preCheckoutQuery['id'], false, 'Invalid transaction');
             return false;
         }
@@ -38,9 +39,12 @@ class TgStarService extends BaseService
             $preCheckoutQuery["currency"] == "XTR" && 
             $transaction_info['transaction_star_amount'] == $preCheckoutQuery['total_amount']
             ) {
+            Log::debug("订单校验成功");
             $this->telegram->answerPreCheckoutQuery($preCheckoutQuery['id'], true);
+            Log::debug("answer成功");
             return true;
         } else {
+            Log::debug("订单校验失败");
             if ($transaction_info["pay_status"]!=-1 && $transaction_info["pay_status"]!=1){
                 //记录日志
                 Log::error('【Invalid transaction - Not Match1】: '. json_encode($preCheckoutQuery));
@@ -48,6 +52,7 @@ class TgStarService extends BaseService
                     ->update(['pay_status' => -1]);
             }
             $this->telegram->answerPreCheckoutQuery($preCheckoutQuery['id'], false, 'Invalid transaction');
+            Log::debug("answer成功");
             return false;
         }
     }
