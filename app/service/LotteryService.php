@@ -69,7 +69,7 @@ class LotteryService extends BaseService
                     'amount' => $giftType['pay_star'],
                 ]
             ])
-        ], timeout: 10, test: true);
+        ], timeout: 10);
 
         $transaction = new TgStarTransactions();
         $transaction->user_id = $this->user_id;
