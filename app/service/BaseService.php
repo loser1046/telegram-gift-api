@@ -5,6 +5,7 @@ namespace app\service;
 use app\validate\Page;
 use think\Model;
 use think\facade\Lang;
+use \TelegramBot\Api\BotApi;
 
 /**
  * 基础服务层
@@ -22,6 +23,8 @@ abstract class BaseService
     protected $user_id;
     protected $telegram_id;
     protected $lang;
+    protected $telegram;
+
 
 
     public function __construct()

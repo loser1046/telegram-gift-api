@@ -5,5 +5,7 @@
 return [
     // 指令定义
     'commands' => [
+        'gift:syn' => 'app\command\Gift\Syn',
+        'gift:initGifts' => 'app\command\Gift\InitGifts',
     ],
 ];

@@ -1,5 +1,5 @@
 <?php
-declare (strict_types = 1);
+declare(strict_types=1);
 
 namespace app\service;
 
@@ -35,19 +35,20 @@ class TgStarService extends BaseService
             return false;
         }
 
-        if ($transaction_info["pay_status"] == 0 && 
-            $preCheckoutQuery["currency"] == "XTR" && 
+        if (
+            $transaction_info["pay_status"] == 0 &&
+            $preCheckoutQuery["currency"] == "XTR" &&
             $transaction_info['transaction_star_amount'] == $preCheckoutQuery['total_amount']
-            ) {
+        ) {
             Log::debug("订单校验成功");
             $this->telegram->answerPreCheckoutQuery($preCheckoutQuery['id'], true);
             Log::debug("answer成功");
             return true;
         } else {
             Log::debug("订单校验失败");
-            if ($transaction_info["pay_status"]!=-1 && $transaction_info["pay_status"]!=1){
+            if ($transaction_info["pay_status"] != -1 && $transaction_info["pay_status"] != 1) {
                 //记录日志
-                Log::error('【Invalid transaction - Not Match1】: '. json_encode($preCheckoutQuery));
+                Log::error('【Invalid transaction - Not Match1】: ' . json_encode($preCheckoutQuery));
                 TgStarTransactions::where('transaction_id', $transaction_id)
                     ->update(['pay_status' => -1]);
             }
@@ -72,32 +73,32 @@ class TgStarService extends BaseService
             return false;
         }
 
-        if ($transaction_info["pay_status"] == 0 && 
-            $successfulPayment["currency"] == "XTR" && 
+        if (
+            $transaction_info["pay_status"] == 0 &&
+            $successfulPayment["currency"] == "XTR" &&
             $transaction_info['transaction_star_amount'] == $successfulPayment['total_amount']
-            ) {
-            
-                //更新状态
-                TgStarTransactions::where('transaction_id', $transaction_id)
-                    ->update([
-                        'pay_status' => 1,
-                        "tg_payment_charge_id" => $successfulPayment['telegram_payment_charge_id'] ?? "",
-                        "provider_payment_charge_id" => $successfulPayment['provider_payment_charge_id'] ?? "",
-                        "pay_star_amount" => $successfulPayment['total_amount'] ?? 0,
-                        "pay_time" => $successfulPayment['date'] ?? time()
-                    ]);
-                // 抽奖 && 发放奖品
-                try {
-                    (new LotteryService())->doLotteryGift($transaction_info);
-                } catch (\Exception $e) {
-                    // 处理抽奖失败的情况，例如记录错误日志
-                    Log::error('【Invalid transaction - doLotteryGift Error】: '. $e->getMessage() . json_encode($successfulPayment));
-                    return false;
-                }
+        ) {
+            //更新状态
+            TgStarTransactions::where('transaction_id', $transaction_id)
+                ->update([
+                    'pay_status' => 1,
+                    "tg_payment_charge_id" => $successfulPayment['telegram_payment_charge_id'] ?? "",
+                    "provider_payment_charge_id" => $successfulPayment['provider_payment_charge_id'] ?? "",
+                    "pay_star_amount" => $successfulPayment['total_amount'] ?? 0,
+                    "pay_time" => $successfulPayment['date'] ?? time()
+                ]);
+            // 抽奖 && 发放奖品
+            try {
+                (new LotteryService())->doLotteryGift($transaction_info);
+            } catch (\Exception $e) {
+                // 处理抽奖失败的情况，例如记录错误日志
+                Log::error('【Invalid transaction - doLotteryGift Error】: ' . $e->getMessage() . json_encode($successfulPayment));
+                return false;
+            }
             return true;
-        }else{
+        } else {
             //记录日志
-            Log::error('【Invalid transaction - Not Match】: '. json_encode($successfulPayment));
+            Log::error('【Invalid transaction - Not Match】: ' . json_encode($successfulPayment));
             TgStarTransactions::where('transaction_id', $transaction_id)
                 ->update([
                     'pay_status' => -1,
@@ -106,7 +107,7 @@ class TgStarService extends BaseService
                     "pay_star_amount" => $successfulPayment['total_amount'] ?? 0,
                     "pay_time" => $successfulPayment['date'] ?? 0,
                 ]);
-                return false;
+            return false;
         }
     }
 
@@ -117,11 +118,13 @@ class TgStarService extends BaseService
      */
     public function validateTelegramCallback(array $headers)
     {
-        if (!isset($headers['x-telegram-bot-api-secret-token']) || 
-            $headers['x-telegram-bot-api-secret-token'] !== env('telegram.secret_token')) {
+        if (
+            !isset($headers['x-telegram-bot-api-secret-token']) ||
+            $headers['x-telegram-bot-api-secret-token'] !== env('telegram.secret_token')
+        ) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -132,9 +135,10 @@ class TgStarService extends BaseService
      */
     public function getRecordByTransactionId($transaction_id)
     {
-        $record = TgStarTransactions::where(['transaction_id'=>$transaction_id,"user_id"=>$this->user_id])
+        $record = TgStarTransactions::where(['transaction_id' => $transaction_id, "user_id" => $this->user_id])
             ->with(['gifts'])
             ->field("transaction_id,pay_status,pay_star_amount,pay_time,gift_id,gift_tg_id,gift_is_limit,award_star,award_status,award_time,award_error_remark")
+            // ->append(['gift_animation'])
             ->findOrEmpty()
             ->toArray();
         if (empty($record)) {
@@ -150,7 +154,7 @@ class TgStarService extends BaseService
                 Log::error('【Gift animation JSON file not found】: ' . $json_file_path);
             }
         }
-        
+
         return $record;
     }
 
@@ -162,20 +166,20 @@ class TgStarService extends BaseService
     public function getUserGifts($is_limit = false)
     {
         $where = [
-            "user_id"=>$this->user_id,
-            "award_status"=>1,
+            "user_id" => $this->user_id,
+            "award_status" => 1,
             'award_type' => 2,
-            "pay_status"=>1
+            "pay_status" => 1
         ];
         if ($is_limit) {
             $where["gift_is_limit"] = 1;
         }
         $user_gifts_model = $this->model->where($where)
             ->with(['gifts'])
-            ->order('award_time','desc')
+            ->order('award_time', 'desc')
             ->field('id,award_star,gift_id');
         $list = $this->pageQuery($user_gifts_model);
         return $list;
     }
-    
+
 }

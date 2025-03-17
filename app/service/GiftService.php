@@ -5,8 +5,7 @@ namespace app\service;
 
 use app\model\Gifts;
 use app\model\GiftType;
-use think\facade\Log;
-use think\Response;
+use \TelegramBot\Api\BotApi;
 
 class GiftService extends BaseService
 {
@@ -83,4 +82,5 @@ class GiftService extends BaseService
             ->toArray();
         return $types;
     }
+
 }
