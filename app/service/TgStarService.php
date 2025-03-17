@@ -135,10 +135,21 @@ class TgStarService extends BaseService
         $record = TgStarTransactions::where(['transaction_id'=>$transaction_id,"user_id"=>$this->user_id])
             ->with(['gifts'])
             ->field("transaction_id,pay_status,pay_star_amount,pay_time,gift_id,gift_tg_id,gift_is_limit,award_star,award_status,award_time,award_error_remark")
-            ->findOrEmpty()->toArray();
+            ->findOrEmpty()
+            ->toArray();
         if (empty($record)) {
             throw new ApiException("Not found");
         }
+        // 如果存在gift_tg_id，获取对应的动画JSON文件内容
+        if (!empty($record) && !empty($record["gift_tg_id"]) && !empty($record["gifts"])) {
+            $json_file_path = public_path() . 'static/' . $record["gift_tg_id"] . '.json';
+            if (file_exists($json_file_path)) {
+                $record["gifts"]["gift_animation"] = file_get_contents($json_file_path);
+            } else {
+                Log::error('【Gift animation JSON file not found】: ' . $json_file_path);
+            }
+        }
+        
         return $record;
     }
 
