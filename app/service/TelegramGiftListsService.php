@@ -36,7 +36,7 @@ class TelegramGiftListsService extends BaseService
                     'custom_emoji_id' => $value['sticker']['custom_emoji_id'] ?? '',
                     'file_id' => $value['sticker']['file_id'] ?? '',
                     'file_unique_id' => $value['sticker']['file_unique_id'] ?? '',
-                    'is_limit' => isset($value['sticker']['custom_emoji_id']) ? 1 : 0,
+                    'is_limit' => isset($value['remaining_count']) ? 1 : 0,
                     'star_count' => $value['star_count'] ?? 0,
                     'upgrade_star_count' => $value['upgrade_star_count'] ?? 0,
                     'remaining_count' => $value['remaining_count'] ?? 0,
