@@ -34,7 +34,8 @@ class GiftService extends BaseService
     {
         $gifts = $this->model->where('top_show', 1)
             ->order(['star_price'=>'asc',"probability"=>"asc"])
-            ->field("id,star_price,probability,emoji")
+            ->field("id,star_price,gift_tg_id,probability,emoji")
+            // ->append(['gift_animation'])
             ->select()
             ->toArray();
         return $gifts;

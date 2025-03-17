@@ -146,6 +146,7 @@ class TgStarService extends BaseService
             if (file_exists($json_file_path)) {
                 $record["gifts"]["gift_animation"] = file_get_contents($json_file_path);
             } else {
+                $record["gifts"]["gift_animation"] = "";
                 Log::error('【Gift animation JSON file not found】: ' . $json_file_path);
             }
         }
