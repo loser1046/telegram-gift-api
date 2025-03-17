@@ -25,6 +25,20 @@ class GiftService extends BaseService
         $gifts = $this->model->select()->toArray();
         return $gifts;
     }
+
+    /**
+     * 获取所有置顶奖品
+     * @return array
+     */
+    public function getTopGifts()
+    {
+        $gifts = $this->model->where('top_show', 1)
+            ->order(['star_price'=>'asc',"probability"=>"asc"])
+            ->field("id,star_price,probability,emoji")
+            ->select()
+            ->toArray();
+        return $gifts;
+    }
     
     /**
      * 获取所有抽奖档位

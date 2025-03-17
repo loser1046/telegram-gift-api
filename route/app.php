@@ -6,6 +6,7 @@ use app\middleware\ApiCheckToken;
 Route::group( function () {
     Route::post('login', 'User/doLogin');
     Route::get('gifts', 'Gifts/index');
+    Route::get('topGifts', 'Gifts/getTopGifts');
     Route::get('allGiftTypes', 'Gifts/getTypes');
     Route::get('allGiftsByType/:type_id', 'Gifts/getGiftsByType');
     Route::get('rankList/:type_id', 'Rank/getRankList');

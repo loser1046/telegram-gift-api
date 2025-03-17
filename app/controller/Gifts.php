@@ -51,6 +51,15 @@ class Gifts extends BaseController
     }
 
     /**
+     * 获取所有置顶奖品
+     */
+    public function getTopGifts()
+    {
+        $result = $this->giftService->getTopGifts();
+        return success($result);
+    }
+
+    /**
      * 执行抽奖
      */
     public function doLottery($type_id)
