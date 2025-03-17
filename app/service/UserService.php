@@ -3,6 +3,7 @@ declare (strict_types = 1);
 
 namespace app\service;
 
+use app\exception\ApiException;
 use app\model\Users;
 use jwt\TokenAuth;
 use think\facade\Log;
@@ -34,7 +35,7 @@ class UserService extends BaseService
 
         $token = $this->createToken($user);
         return [
-            'token' => $token,
+            'token' => $token["token"],
             'user' => $user,
         ];
     }
@@ -108,6 +109,23 @@ class UserService extends BaseService
             throw new \Exception('MUST_LOGIN', 401);
         }
         return $token_info['data'];
+    }
+
+
+    /**
+     * 获取用户信息
+     * @return array
+     */
+    public function getUserInfo()
+    {
+        $user_info = $this->model->where(['id' => $this->user_id])
+            ->withoutField('id,tg_id,created_at,updated_at')
+            ->findOrEmpty()
+            ->toArray();
+        if (empty($user_info)) {
+            throw new ApiException("Not found");
+        }
+        return $user_info;
     }
 
 }

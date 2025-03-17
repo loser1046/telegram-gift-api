@@ -11,4 +11,13 @@ use think\Model;
 class Gifts extends Model
 {
     protected $name = 'gifts';
+    
+
+    /**
+     * 定义与奖品档位的关联
+     */
+    public function giftType()
+    {
+        return $this->belongsTo(GiftType::class, 'gift_type', 'id');
+    }
 }
