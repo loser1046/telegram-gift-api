@@ -134,7 +134,7 @@ class TgStarService extends BaseService
     {
         $record = TgStarTransactions::where(['transaction_id'=>$transaction_id,"user_id"=>$this->user_id])
             ->with(['gifts'])
-            ->field("transaction_id,pay_status,pay_star_amount,pay_time,gift_id,gift_tg_id,gift_is_limit,award_star,award_status,award_time")
+            ->field("transaction_id,pay_status,pay_star_amount,pay_time,gift_id,gift_tg_id,gift_is_limit,award_star,award_status,award_time,award_error_remark")
             ->findOrEmpty()->toArray();
         if (empty($record)) {
             throw new ApiException("Not found");

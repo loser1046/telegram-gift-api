@@ -62,7 +62,6 @@ class TgStar extends BaseController
         } elseif (isset($data['message']['successful_payment'])) {
             $this->tgStarService->handleSuccessfulPayment($data['message']['successful_payment']);
         }
-        
         return success('Callback processed');
     }
 
