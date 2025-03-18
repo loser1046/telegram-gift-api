@@ -22,6 +22,12 @@ class LotteryOrder extends Model
             ->withoutField('create_time,update_time');
     }
 
+    public function user()
+    {
+        return $this->hasOne(Users::class, 'id', 'user_id')->joinType('left');
+            // ->withField('id,first_name,last_name,nick_name,username,photo_url,is_premium');
+    }
+
     public function getGiftAnimationAttr($value, $data)
 	{
         if ($data["gift_tg_id"]) {

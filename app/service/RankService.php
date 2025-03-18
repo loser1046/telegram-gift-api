@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace app\service;
 
 use app\exception\ApiException;
+use app\model\LotteryOrder;
 use app\model\TgStarTransactions;
 use app\model\LotteryType;
 
@@ -18,7 +19,7 @@ class RankService extends BaseService
     public function getRankList(int $typeId = 0)
     {
         // 获取所有启用的抽奖类型
-        $types = GiftType::where('show', 1);
+        $types = LotteryType::where('show', 1);
         if ($typeId > 0) {
             $types = $types->where('id', $typeId);
         }
@@ -30,22 +31,20 @@ class RankService extends BaseService
 
         $result = [];
         foreach ($types as $type) {
-            $rankQuery = TgStarTransactions::with([
+            $rankQuery = LotteryOrder::with([
                 'user' => function ($query) {
                     $query->field(['id', 'first_name', 'last_name', 'nick_name', 'username', 'photo_url', 'is_premium']);
                 }
             ])
                 ->where([
-                    'pay_status' => 1,
-                    'award_status' => 1,
-                    'award_type' => 2,
-                    'gift_type' => $type['id']
+                    'lottery_type_id' => $type['id']
                 ])
                 ->field([
                     'user_id',
-                    'gift_type',
+                    'lottery_type_id',
                     'COUNT(*) as lottery_count',
-                    'SUM(transaction_star_amount) as total_cost',
+                    'SUM(gift_is_limit) as limit_raward_count',
+                    'SUM(pay_integral) as total_cost',
                     'SUM(award_star) as total_award'
                 ])
                 ->group('user_id')
