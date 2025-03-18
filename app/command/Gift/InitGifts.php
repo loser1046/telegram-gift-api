@@ -35,7 +35,7 @@ class InitGifts extends Command
             $output->writeln('奖品列表已有数据！！！');
             return false;
         }
-        $gift_types = GiftType::select()->toArray();
+        $gift_types = LotteryType::select()->toArray();
         if (empty($gift_types)) {
             $output->writeln('奖品类型为空！！！');
             return false;
@@ -59,8 +59,6 @@ class InitGifts extends Command
                     "file_unique_id" => $gift_one["file_unique_id"],
                     "star_count" => $gift_one["star_count"],
                     "upgrade_star_count" => $gift_one["upgrade_star_count"],
-                    "chance" => "",
-                    "chance_cmp" => "",
                     "top_show" => 0
                 ];
             }
