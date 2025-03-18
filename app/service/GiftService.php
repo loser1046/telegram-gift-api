@@ -4,8 +4,7 @@ declare (strict_types = 1);
 namespace app\service;
 
 use app\model\Gifts;
-use app\model\GiftType;
-use \TelegramBot\Api\BotApi;
+use app\model\LotteryType;
 
 class GiftService extends BaseService
 {
@@ -46,9 +45,9 @@ class GiftService extends BaseService
      */
     public function getAllTypes()
     {
-        $types = GiftType::where('show', 1)
-            ->order(['sort'=>"asc","pay_star"=>"asc"])
-            ->withoutField("created_at,updated_at")
+        $types = LotteryType::where('show', 1)
+            ->order(['sort'=>"asc","pay_integral"=>"asc"])
+            ->withoutField("create_time,update_time")
             ->select()
             ->toArray();
         return $types;
@@ -62,7 +61,7 @@ class GiftService extends BaseService
     public function getGiftsByType(int $typeId)
     {
         $gifts = $this->model->where('gift_type', $typeId)
-            ->withoutField("created_at,updated_at")
+            ->withoutField("create_time,update_time")
             ->order(['star_price'=>'asc'])
             ->select()
             ->toArray();
@@ -75,9 +74,10 @@ class GiftService extends BaseService
      */
     public function getAllTypesWithGifts()
     {
-        $types = GiftType::where('show', 1)
+        $types = LotteryType::where('show', 1)
             ->with(['gifts'])
-            ->order(['sort'=>'asc','pay_star'=>'asc'] )
+            ->withoutField("create_time,update_time")
+            ->order(['sort'=>'asc','pay_integral'=>'asc'] )
             ->select()
             ->toArray();
         return $types;

@@ -3,12 +3,17 @@
 namespace app\controller;
 
 use app\BaseController;
+use app\service\LotteryService;
 use app\service\TgStarService;
 use app\service\UserService;
 use think\Response;
 
 class User extends BaseController
 {
+    /**
+     * 登录
+     * @return Response
+     */
     public function doLogin(): Response
     {
         $data = $this->request->params([
@@ -40,11 +45,11 @@ class User extends BaseController
     public function getUserGifts($type = null)
     {
         if ($type == 'limit') {
-            $data = (new TgStarService())->getUserGifts(is_limit: true);
+            $data = (new LotteryService())->getUserGifts(is_limit: true);
         }elseif ($type == 'all') {
-            $data = (new TgStarService())->getUserGifts(is_limit: false);
+            $data = (new LotteryService())->getUserGifts(is_limit: false);
         }else{
-            $data = (new TgStarService())->getUserAllGifts();
+            $data = (new LotteryService())->getUserAllGifts();
         }
         return success($data);
     }
@@ -55,7 +60,7 @@ class User extends BaseController
      */
     public function getUserAllGifts()
     {
-        return success((new TgStarService())->getUserAllGifts());
+        return success((new LotteryService())->getUserAllGifts());
     }
 
 }

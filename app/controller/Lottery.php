@@ -7,7 +7,7 @@ use app\service\GiftService;
 use app\service\LotteryService;
 use \TelegramBot\Api\BotApi;
 
-class Gifts extends BaseController
+class Lottery extends BaseController
 {
 
     protected $telegram;
@@ -66,6 +66,18 @@ class Gifts extends BaseController
     {
         $result = $this->lotteryService->createTransaction($type_id);
         
+        return success($result);
+    }
+
+    public function giftToGift($id)
+    {
+        $result = $this->lotteryService->giftToGift($id);
+        return success($result);
+    }
+
+    public function giftToIntegral($id)
+    {
+        $result = $this->lotteryService->giftToIntegral($id);
         return success($result);
     }
 

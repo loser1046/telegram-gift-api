@@ -4,7 +4,7 @@ declare (strict_types = 1);
 namespace app\command\Gift;
 
 use app\model\Gifts;
-use app\model\GiftType;
+use app\model\LotteryType;
 use app\model\TelegramGiftLists;
 use think\console\Command;
 use think\console\Input;

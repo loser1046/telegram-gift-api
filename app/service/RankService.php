@@ -5,7 +5,7 @@ namespace app\service;
 
 use app\exception\ApiException;
 use app\model\TgStarTransactions;
-use app\model\GiftType;
+use app\model\LotteryType;
 
 class RankService extends BaseService
 {

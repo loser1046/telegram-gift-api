@@ -63,11 +63,12 @@ class UserService extends BaseService
             'first_name' => $request_user_data['first_name'] ?? '',
             'last_name' => $request_user_data['last_name'] ?? '',
             'nick_name' => $nickname,
+            'integral_num' => 0,
+            'first_lottery' => 1,
             'username' => $request_user_data['username'] ?? '',
             'lang' => $request_user_data['language_code'] ?? '',
             'photo_url' => $request_user_data['photo_url'] ?? '',
             'is_premium' => $request_user_data['is_premium'] ?? 0,
-            'allows_write_to_pm' => $request_user_data['allows_write_to_pm'] ? 1 : 0
         ]);
         return $usersModel->toArray();
     }
@@ -119,7 +120,7 @@ class UserService extends BaseService
     public function getUserInfo()
     {
         $user_info = $this->model->where(['id' => $this->user_id])
-            ->withoutField('id,tg_id,created_at,updated_at')
+            ->withoutField('id,tg_id,create_time,update_time')
             ->findOrEmpty()
             ->toArray();
         if (empty($user_info)) {

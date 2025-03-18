@@ -74,7 +74,7 @@ class ExceptionHandle extends Handle
         }  else if ($e instanceof ServerException) {
             return fail($e->getMessage(), [], http_code: $e->getCode());
         } else {
-            return fail($e->getMessage(), $massageData);
+            return fail($e->getMessage(), $massageData, code:$e->getCode());
         }
         // 其他错误交给系统处理
         // return parent::render($request, $e);

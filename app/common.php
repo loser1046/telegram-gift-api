@@ -47,3 +47,12 @@ function quickRandom($length = 12)
 
 	return substr(str_shuffle(str_repeat($pool, $length)), 0, $length);
 }
+
+function getGiftAnimationString($gift_tg_id)
+{
+	$json_file_path = public_path() . 'static/' . $gift_tg_id . '.json';
+	if (file_exists($json_file_path)) {
+		return file_get_contents($json_file_path);
+	}
+	return "";
+}

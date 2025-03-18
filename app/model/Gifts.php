@@ -19,7 +19,7 @@ class Gifts extends Model
      */
     public function giftType()
     {
-        return $this->belongsTo(GiftType::class, 'gift_type', 'id');
+        return $this->belongsTo(LotteryType::class, 'id', 'lottery_type_id');
     }
 
     // public function getGiftAnimationAttr($value, $data)

@@ -39,6 +39,26 @@ class TgStar extends BaseController
         return success($record);
     }
 
+    public function doBuyIntegral($type_id)
+    {
+        $result = $this->tgStarService->doBuyIntegral($type_id);
+        
+        return success($result);
+    }
+
+    /**
+     * 购买积分页面列表
+     * @return \think\Response
+     */
+    public function starToIntegrayList()
+    {
+        return success($this->tgStarService->starToIntegrayList());
+    }
+
+    /**
+     * Telegram回调处理
+     * @return \think\Response
+     */
     public function tgCallback()
     {
         $headers = $this->request->header();

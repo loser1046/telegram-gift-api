@@ -8,7 +8,7 @@ use think\Model;
 /**
  * @mixin \think\Model
  */
-class IntegralRecord extends Model
+class TgStarIntegral extends Model
 {
-    protected $name = 'integral_record';
+    protected $name = 'tg_star_integral';
 }

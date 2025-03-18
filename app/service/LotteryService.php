@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use app\dict\CommonDict;
 use app\exception\ApiException;
 use app\model\Gifts;
-use app\model\GiftType;
+use app\model\LotteryOrder;
+use app\model\LotteryType;
+use app\model\TgStarIntegral;
 use app\model\Users;
 use app\model\IntegralRecord;
 use app\model\TgStarTransactions;
@@ -28,96 +31,63 @@ class LotteryService extends BaseService
 
     public function createTransaction(int $typeId)
     {
-
         // 获取档位信息
-        $giftType = GiftType::where(["id" => $typeId, "show" => 1])->findOrEmpty()->toArray();
+        $giftType = LotteryType::where(["id" => $typeId, "show" => 1])->findOrEmpty()->toArray();
         if (empty($giftType)) {
-            throw new ApiException('抽奖不存在');
+            throw new ApiException('Lottery type not found');
         }
 
         //查询是否发放过免费抽奖积分
-        $hasLottery = TgStarTransactions::where(["user_id" => $this->user_id])->findOrEmpty()->toArray();
+        $hasLottery = LotteryOrder::where(["user_id" => $this->user_id])->findOrEmpty()->toArray();
         if (empty($hasLottery)) {
-            [$transaction_id,$integral] = $this->doLotteryIntegral($giftType);
-            $invoicelink = "";
-        } else {
-            $integral = 0;
-            [$transaction_id,$invoicelink] = $this->createInvoiceLink($giftType);
+
+            $integral = $this->doLotteryIntegralFree($giftType);
+            return [
+                'raward_type' => 1, //积分
+                'integral' => $integral
+            ];
         }
+        // 执行付费抽奖逻辑
+        $award = $this->doLotteryIntegral($giftType);
+        $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
         return [
-            'transaction_id' => $transaction_id,
-            'integral' => $integral,
-            'invoicelink' => $invoicelink
+            'raward_type' => 2, //礼物
+            "gifts" => $award,
         ];
     }
-
-    /**
-     * 创建Telegram发票链接
-     */
-    public function createInvoiceLink($giftType)
-    {
-
-        $transaction_id = (new Snowflake)->id();
-        $invoicelink = $this->telegram->call("createInvoiceLink", data: [
-            'title' => $giftType['type_name'],
-            'description' => $giftType['description'],
-            'payload' => $transaction_id,
-            'currency' => "XTR",
-            'prices' => json_encode([
-                [
-                    'label' => 'price',
-                    'amount' => $giftType['pay_star'],
-                ]
-            ])
-        ], timeout: 10);
-
-        $transaction = new TgStarTransactions();
-        $transaction->user_id = $this->user_id;
-        $transaction->user_tg_id = $this->telegram_id;
-        $transaction->gift_type = $giftType['id'];
-        $transaction->transaction_id = $transaction_id;
-        $transaction->pay_status = 0;
-        $transaction->transaction_star_amount = $giftType['pay_star'];
-        $transaction->award_status = 0;
-        $transaction->award_type = 2;
-        $transaction->award_time = time();
-        $transaction->save();
-        return [$transaction->transaction_id,$invoicelink];
-    }
-
     /**
      * 执行抽奖
      * @param array $typeId 档位ID
      * @return mixed
      * @throws \Exception
      */
-    public function doLotteryIntegral($giftType)
+    public function doLotteryIntegralFree($giftType)
     {
-        // 随机积分 10-100
-        $integral = mt_rand(10, 100);
+        // 随机积分 5 - 10
+        $integral = mt_rand(5, 10);
 
         // 记录抽奖结果
         Db::startTrans();
         try {
+            $transaction_id = (new Snowflake())->id();
+
             // 记录积分变动
             $integralRecord = new IntegralRecord();
             $integralRecord->user_id = $this->user_id;
+            $integralRecord->user_tg_id = $this->telegram_id;
             $integralRecord->change_num = $integral;
-            $integralRecord->type = 1; // 1-首次免费抽奖获得
+            $integralRecord->transaction_id = $transaction_id;
+            $integralRecord->type = CommonDict::INTEGRAL_TYPE_FREE; // 1-首次免费抽奖获得
             $integralRecord->save();
 
-            $transaction = new TgStarTransactions();
-            $transaction->user_id = $this->user_id;
-            $transaction->user_tg_id = $this->telegram_id;
-            $transaction->gift_type = $giftType['id'];
-            $transaction->transaction_id = (new Snowflake)->id();
-            $transaction->pay_status = 1;
-            $transaction->transaction_star_amount = $giftType['pay_star'];
-            $transaction->pay_time = time();
-            $transaction->award_status = 1;
-            $transaction->award_type = 1;
-            $transaction->award_time = time();
-            $transaction->save();
+            $lottery_order_model = new LotteryOrder();
+            $lottery_order_model->user_id = $this->user_id;
+            $lottery_order_model->user_tg_id = $this->telegram_id;
+            $lottery_order_model->pay_integral = 0;
+            $lottery_order_model->order_uuid = $transaction_id;
+            $lottery_order_model->lottery_type_id = $giftType['id'];
+            $lottery_order_model->gift_id = 0;
+            $lottery_order_model->save();
 
             // 更新用户积分
             Users::where('id', $this->user_id)->inc('integral_num', $integral)->update([]);
@@ -125,11 +95,89 @@ class LotteryService extends BaseService
             Db::commit();
         } catch (\Exception $e) {
             Db::rollback();
-            Log::error('积分抽奖失败：' . $e->getMessage());
-            throw new ApiException('抽奖失败，请稍后再试');
+            Log::error('免费积分抽奖失败：' . $e->getMessage());
+            throw new ApiException('Lottery failed');
         }
-        return [$transaction->transaction_id,$integral];
+        return $integral;
     }
+
+    /**
+     * 执行抽奖
+     * @param array $giftType 档位信息
+     * @return mixed
+     * @throws \Exception
+     */
+    public function doLotteryIntegral($latteryType)
+    {
+        $user_integral = Users::where('id', $this->user_id)->value('integral_num');
+        if ($user_integral < $latteryType['pay_integral']) {
+            throw new ApiException('Insufficient balance', -1);
+        }
+
+        // 记录抽奖结果
+        Db::startTrans();
+        try {
+
+            // 更新用户积分
+            Users::where('id', $this->user_id)->dec('integral_num', $latteryType['pay_integral'])->update([]);
+
+            $transaction_id = (new Snowflake())->id();
+            // 记录积分变动
+            $integralRecord = new IntegralRecord();
+            $integralRecord->user_id = $this->user_id;
+            $integralRecord->user_tg_id = $this->telegram_id;
+            $integralRecord->change_num = -$latteryType['pay_integral'];
+            $integralRecord->transaction_id = $transaction_id;
+            $integralRecord->type = CommonDict::INTEGRAL_TYPE_LOTTERY;
+            $integralRecord->save();
+
+            // 获取该档位下的所有奖品
+            $gifts = $this->giftService->getGiftsByType($latteryType['id']);
+            if (empty($gifts)) {
+                throw new ApiException('Gift not found');
+            }
+
+            // 执行抽奖逻辑
+            $award = $this->lottery($gifts);
+
+            $lottery_order_model = new LotteryOrder();
+            $lottery_order_model->user_id = $this->user_id;
+            $lottery_order_model->user_tg_id = $this->telegram_id;
+            $lottery_order_model->pay_integral = $latteryType['pay_integral'];
+            $lottery_order_model->order_uuid = $transaction_id;
+            $lottery_order_model->lottery_type_id = $latteryType['id'];
+            $lottery_order_model->gift_id = $award['id'];
+            $lottery_order_model->gift_tg_id = $award['gift_tg_id'];
+            $lottery_order_model->gift_is_limit = $award['is_limit'];
+            $lottery_order_model->award_star = $award['star_price'];
+            $lottery_order_model->save();
+
+
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
+            Log::error('【积分抽奖失败】：' . $e->getMessage());
+            throw new ApiException('Lottery failed');
+        }
+        return $award;
+    }
+
+
+    public function addIntergralRecord($transaction_info)
+    {
+        // 记录积分变动
+        $integralRecord = new IntegralRecord();
+        $integralRecord->user_id = $transaction_info['user_id'];
+        $integralRecord->user_tg_id = $transaction_info['user_tg_id'];
+        $integralRecord->change_num = $transaction_info['transaction_integral_amount'];
+        $integralRecord->transaction_id = $transaction_info['transaction_id'];
+        $integralRecord->type = CommonDict::INTEGRAL_TYPE_TRANSACTION;
+        $integralRecord->save();
+        // 更新用户积分
+        Users::where('id', $transaction_info['user_id'])->inc('integral_num', $transaction_info['transaction_integral_amount'])->update([]);
+    }
+
+
 
     /**
      * 执行抽奖
@@ -138,7 +186,7 @@ class LotteryService extends BaseService
      */
     public function doLotteryGift(array $transaction_info)
     {
-        $typeId = $transaction_info["gift_type"];
+        $typeId = $transaction_info["lottery_type_id"];
 
         // 获取该档位下的所有奖品
         $gifts = $this->giftService->getGiftsByType($typeId);
@@ -154,7 +202,7 @@ class LotteryService extends BaseService
         try {
             // 更新奖品中奖次数
             Gifts::where('id', $award['id'])->inc('occurrence_num', 1)->update([]);
-            $this->sendGiftToUser($transaction_info['user_tg_id'],$award['gift_tg_id']);
+            $this->sendGiftToUser($transaction_info['user_tg_id'], $award['gift_tg_id']);
             // 更新抽奖记录
             TgStarTransactions::where('transaction_id', $transaction_info['transaction_id'])
                 ->update([
@@ -171,16 +219,16 @@ class LotteryService extends BaseService
         } catch (\Exception $e) {
             Db::rollback();
             TgStarTransactions::where('transaction_id', $transaction_info['transaction_id'])
-            ->update([
-                'gift_id' => $award['id'],
-                'gift_tg_id' => $award['gift_tg_id'],
-                'award_star' => $award['star_price'],
-                'award_status' => -1,
-                'award_type' => 2,
-                'award_time' => time(),
-                'gift_is_limit' => $award['is_limit'],
-                'award_error_remark' => $e->getMessage(),
-            ]);
+                ->update([
+                    'gift_id' => $award['id'],
+                    'gift_tg_id' => $award['gift_tg_id'],
+                    'award_star' => $award['star_price'],
+                    'award_status' => -1,
+                    'award_type' => 2,
+                    'award_time' => time(),
+                    'gift_is_limit' => $award['is_limit'],
+                    'award_error_remark' => $e->getMessage(),
+                ]);
             Log::error('抽奖失败：' . $e->getMessage());
             throw new ApiException('抽奖失败' . $e->getMessage());
         }
@@ -213,6 +261,101 @@ class LotteryService extends BaseService
 
         // 默认返回第一个奖品（理论上不会执行到这里）
         return $gifts[0];
+    }
+
+    /**
+     * 获取用户的奖品信息
+     * @param bool $is_limit 是否只获取限量奖品
+     * @return array 用户的奖品信息
+     */
+    public function getUserGifts($is_limit = false)
+    {
+        $where = [["award_status", "=", 0], ["user_id", "=", $this->user_id], ["gift_id", "<>", 0]];
+        if ($is_limit) {
+            array_push($where, ["gift_is_limit", "=", 1]);
+        }
+        $user_gifts_model = LotteryOrder::where($where)
+            ->with(['gifts'])
+            ->order('create_time', 'desc')
+            ->field('id,user_id,user_tg_id,gift_id,gift_tg_id,award_star');
+        $list = $this->pageQuery($user_gifts_model);
+        return $list;
+    }
+
+    public function getUserAllGifts()
+    {
+        $user_limit_gifts = $this->getUserGifts(is_limit: true);
+        $user_all_gifts = $this->getUserGifts(is_limit: false);
+
+        return [
+            "limit_gifts" => $user_limit_gifts,
+            "all_gifts" => $user_all_gifts
+        ];
+    }
+
+    /**
+     * 购买积分列表
+     * @return array 所有的兑换关系列表
+     */
+    public function starToIntegrayList()
+    {
+        $star_to_integray_list = TgStarIntegral::where(["is_show" => 1])
+            ->order("tg_star_amount", "asc")
+            ->field("id,tg_star_amount,integral_amount")
+            ->select()
+            ->toArray();
+        return $star_to_integray_list;
+    }
+
+    public function giftToGift($id)
+    {
+        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status'=>0])
+            ->append(['gift_animation'])
+            ->findOrEmpty()
+            ->toArray();
+        if (empty($order_info)) {
+            throw new ApiException('Not found');
+        }
+        try {
+            $this->sendGiftToUser($order_info['user_tg_id'], $order_info['gift_tg_id']);
+            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+                ->update(['award_status' => CommonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
+        } catch (\Exception $e) {
+            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+                ->update(['award_error_remark' => $e->getMessage()]);
+            Log::error('【礼物兑换失败】：'. $e->getMessage());
+            throw new ApiException('Gift exchange failed');
+        }
+        return [
+            "gift_animation" => $order_info['gift_animation'],
+            "gift_tg_id" => $order_info['gift_tg_id']
+        ];
+    }
+
+    public function giftToIntegral($id)
+    {
+        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status'=>0])
+            ->findOrEmpty()
+            ->toArray();
+        if (empty($order_info)) {
+            throw new ApiException('Not found');
+        }
+        LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+            ->update(['award_status' => CommonDict::AWARD_STATUS_TO_INTEGRAL, 'award_time' => time()]);
+        // 记录积分变动
+        $integralRecord = new IntegralRecord();
+        $integralRecord->user_id = $order_info['user_id'];
+        $integralRecord->user_tg_id = $order_info['user_tg_id'];
+        $integralRecord->change_num = $order_info['award_star'];
+        $integralRecord->transaction_id = $order_info['order_uuid'];
+        $integralRecord->type = CommonDict::INTEGRAL_TYPE_LOTTERY;
+        $integralRecord->save();
+        // 更新用户积分
+        Users::where('id', $order_info['user_id'])->inc('integral_num', $order_info['award_star'])->update([]);
+        return [
+            "integral_num" => $order_info['award_star'],
+            "gift_tg_id" => $order_info['gift_tg_id']
+        ];
     }
 
     /**
