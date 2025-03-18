@@ -80,7 +80,7 @@ class UserService extends BaseService
      */
     protected function createToken($user_info): ?array
     {
-        $expire_time = config('jwt.ttl') ?? 3600;
+        $expire_time = (int)config('jwt.ttl') ?? 3600;
         $token_info = TokenAuth::createToken($user_info['id'], "api", ['user_id' => $user_info['id'], 'tg_id' => $user_info['tg_id'], 'nick_name' => $user_info['nick_name']], $expire_time);
         return $token_info;
     }

@@ -32,12 +32,30 @@ class User extends BaseController
         return success((new UserService())->getUserInfo());
     }
 
-    public function getUserGifts()
+
+    /**
+     * 根据条件返回用户的Gifts
+     * @return Response
+     */
+    public function getUserGifts($type = null)
     {
-        $data = $this->request->params([
-            ['is_limit', 1]
-        ]);
-        return success((new TgStarService())->getUserGifts($data['is_limit'] == 1));
+        if ($type == 'limit') {
+            $data = (new TgStarService())->getUserGifts(is_limit: true);
+        }elseif ($type == 'all') {
+            $data = (new TgStarService())->getUserGifts(is_limit: false);
+        }else{
+            $data = (new TgStarService())->getUserAllGifts();
+        }
+        return success($data);
+    }
+
+    /**
+     * 获取用户限量Gifts和所有Gifts
+     * @return Response
+     */
+    public function getUserAllGifts()
+    {
+        return success((new TgStarService())->getUserAllGifts());
     }
 
 }

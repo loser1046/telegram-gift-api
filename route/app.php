@@ -17,7 +17,8 @@ Route::group( function () {
 
 Route::group( function () {
     Route::get('/me', 'User/getUserInfo');
-    Route::get('/myGifts', 'User/getUserGifts');
+    Route::get('/myGifts/<type?>', 'User/getUserGifts');
+    // Route::get('/myGifts', 'User/getUserGifts');
     Route::get('gifts', 'Gifts/index');
     Route::post('doLottery/:type_id', 'Gifts/doLottery');
 

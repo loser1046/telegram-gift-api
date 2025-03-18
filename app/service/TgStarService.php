@@ -182,4 +182,15 @@ class TgStarService extends BaseService
         return $list;
     }
 
+    public function getUserAllGifts()
+    {
+        $user_limit_gifts = $this->getUserGifts(is_limit: true);
+        $user_all_gifts =  $this->getUserGifts(is_limit: false);
+
+        return [
+            "limit_gifts" => $user_limit_gifts,
+            "all_gifts" => $user_all_gifts
+        ];
+    }
+
 }
