@@ -39,8 +39,7 @@ class LotteryService extends BaseService
 
         //查询是否发放过免费抽奖积分
         $hasLottery = LotteryOrder::where(["user_id" => $this->user_id])->findOrEmpty()->toArray();
-        // if (empty($hasLottery)) {
-        if (true) {
+        if (empty($hasLottery)) {
             $integral = $this->doLotteryIntegralFree($giftType);
             return [
                 'raward_type' => 1, //积分
