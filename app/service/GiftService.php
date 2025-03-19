@@ -85,7 +85,10 @@ class GiftService extends BaseService
 
     public function getGiftAnimation($gift_tg_id)
     {
-        return getGiftAnimationString($gift_tg_id);
+        return [
+            'gift_tg_id' => $gift_tg_id,
+            'gift_animation' =>  getGiftAnimationString($gift_tg_id)
+        ];
     }
 
 }
