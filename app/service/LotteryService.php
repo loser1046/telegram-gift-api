@@ -51,7 +51,7 @@ class LotteryService extends BaseService
         if(isset($award["transaction_id"]) && isset($award["invoicelink"])){
             return $award;
         }
-        // $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
+        $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
         return [
             'raward_type' => 2, //礼物
             "gifts" => $award,
@@ -323,7 +323,7 @@ class LotteryService extends BaseService
     public function giftToGift($id)
     {
         $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
-            ->append(['gift_animation'])
+            // ->append(['gift_animation'])
             ->findOrEmpty()
             ->toArray();
         if (empty($order_info)) {
@@ -340,7 +340,7 @@ class LotteryService extends BaseService
             throw new ApiException('Gift exchange failed');
         }
         return [
-            "gift_animation" => $order_info['gift_animation'],
+            // "gift_animation" => $order_info['gift_animation'],
             "gift_tg_id" => $order_info['gift_tg_id']
         ];
     }
