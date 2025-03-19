@@ -20,7 +20,7 @@ Route::group( function () {
     Route::get('/myGifts/<type?>', 'User/getUserGifts');
     // Route::get('/myGifts', 'User/getUserGifts');
     Route::get('gifts', 'Lottery/index');
-    Route::get('giftAnimation', 'User/getGiftAnimation');
+    Route::get('giftAnimation/:gift_tg_id', 'User/getGiftAnimation');
     Route::post('doLottery/:type_id', 'Lottery/doLottery');
 
     // Route::get('/gift/createInvoiceLink', 'Lottery/createInvoiceLink');
