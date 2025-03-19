@@ -40,7 +40,6 @@ class LotteryService extends BaseService
         //查询是否发放过免费抽奖积分
         $hasLottery = LotteryOrder::where(["user_id" => $this->user_id])->findOrEmpty()->toArray();
         if (empty($hasLottery)) {
-
             $integral = $this->doLotteryIntegralFree($giftType);
             return [
                 'raward_type' => 1, //积分
@@ -49,6 +48,9 @@ class LotteryService extends BaseService
         }
         // 执行付费抽奖逻辑
         $award = $this->doLotteryIntegral($giftType);
+        if(isset($award["transaction_id"]) && isset($award["invoicelink"])){
+            return $award;
+        }
         $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
         return [
             'raward_type' => 2, //礼物
@@ -111,7 +113,17 @@ class LotteryService extends BaseService
     {
         $user_integral = Users::where('id', $this->user_id)->value('integral_num');
         if ($user_integral < $latteryType['pay_integral']) {
-            throw new ApiException('Insufficient balance', -1);
+            [$transaction_id, $invoicelink] = (new TgStarService())->createInvoiceLink([
+                'tg_star_amount' => $latteryType['pay_integral'],
+                'integral_amount' => $latteryType['pay_integral']
+            ]);
+            return [
+                "user_integral" => $user_integral,
+                "transaction_id" => $transaction_id,
+                "invoicelink" => $invoicelink,
+                "star_amount" => $latteryType['pay_integral'],
+                "integral_amount" => $latteryType['pay_integral']
+            ];
         }
 
         // 记录抽奖结果
@@ -151,7 +163,6 @@ class LotteryService extends BaseService
             $lottery_order_model->gift_is_limit = $award['is_limit'];
             $lottery_order_model->award_star = $award['star_price'];
             $lottery_order_model->save();
-
 
             Db::commit();
         } catch (\Exception $e) {
@@ -309,7 +320,7 @@ class LotteryService extends BaseService
 
     public function giftToGift($id)
     {
-        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status'=>0])
+        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
             ->append(['gift_animation'])
             ->findOrEmpty()
             ->toArray();
@@ -318,12 +329,12 @@ class LotteryService extends BaseService
         }
         try {
             $this->sendGiftToUser($order_info['user_tg_id'], $order_info['gift_tg_id']);
-            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
                 ->update(['award_status' => CommonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
         } catch (\Exception $e) {
-            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+            LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
                 ->update(['award_error_remark' => $e->getMessage()]);
-            Log::error('【礼物兑换失败】：'. $e->getMessage());
+            Log::error('【礼物兑换失败】：' . $e->getMessage());
             throw new ApiException('Gift exchange failed');
         }
         return [
@@ -334,13 +345,13 @@ class LotteryService extends BaseService
 
     public function giftToIntegral($id)
     {
-        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status'=>0])
+        $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
             ->findOrEmpty()
             ->toArray();
         if (empty($order_info)) {
             throw new ApiException('Not found');
         }
-        LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status'=>0])
+        LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
             ->update(['award_status' => CommonDict::AWARD_STATUS_TO_INTEGRAL, 'award_time' => time()]);
         // 记录积分变动
         $integralRecord = new IntegralRecord();

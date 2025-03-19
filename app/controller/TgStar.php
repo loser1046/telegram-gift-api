@@ -39,10 +39,14 @@ class TgStar extends BaseController
         return success($record);
     }
 
+    /**
+     * 开始抽奖
+     * @param $type_id int 抽奖类型
+     * @return \think\Response
+     */
     public function doBuyIntegral($type_id)
     {
         $result = $this->tgStarService->doBuyIntegral($type_id);
-        
         return success($result);
     }
 

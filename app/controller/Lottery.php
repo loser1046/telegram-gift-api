@@ -65,7 +65,9 @@ class Lottery extends BaseController
     public function doLottery($type_id)
     {
         $result = $this->lotteryService->createTransaction($type_id);
-        
+        if(isset($result["transaction_id"]) && isset($result["invoicelink"])){
+            return fail('Insufficient balance of integral',$result,-1);
+        }
         return success($result);
     }
 
