@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\BaseController;
+use app\service\GiftService;
 use app\service\LotteryService;
 use app\service\TgStarService;
 use app\service\UserService;
@@ -61,6 +62,11 @@ class User extends BaseController
     public function getUserAllGifts()
     {
         return success((new LotteryService())->getUserAllGifts());
+    }
+
+    public function getGiftAnimation($gift_tg_id)
+    {
+        return success((new GiftService())->getGiftAnimation($gift_tg_id));
     }
 
 }

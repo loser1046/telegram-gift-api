@@ -83,4 +83,9 @@ class GiftService extends BaseService
         return $types;
     }
 
+    public function getGiftAnimation($gift_tg_id)
+    {
+        return getGiftAnimationString($gift_tg_id);
+    }
+
 }
