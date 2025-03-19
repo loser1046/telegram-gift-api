@@ -2,7 +2,7 @@
 
 namespace app\dict;
 
-class commonDict
+class CommonDict
 {
     //首次抽奖获得
     const INTEGRAL_TYPE_FREE = 1;

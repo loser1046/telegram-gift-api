@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace app\service;
 
-use app\dict\commonDict;
+use app\dict\CommonDict;
 use app\exception\ApiException;
 use app\model\Gifts;
 use app\model\LotteryOrder;
@@ -79,7 +79,7 @@ class LotteryService extends BaseService
             $integralRecord->user_tg_id = $this->telegram_id;
             $integralRecord->change_num = $integral;
             $integralRecord->transaction_id = $transaction_id;
-            $integralRecord->type = commonDict::INTEGRAL_TYPE_FREE; // 1-首次免费抽奖获得
+            $integralRecord->type = CommonDict::INTEGRAL_TYPE_FREE; // 1-首次免费抽奖获得
             $integralRecord->save();
 
             $lottery_order_model = new LotteryOrder();
@@ -140,7 +140,7 @@ class LotteryService extends BaseService
             $integralRecord->user_tg_id = $this->telegram_id;
             $integralRecord->change_num = -$latteryType['pay_integral'];
             $integralRecord->transaction_id = $transaction_id;
-            $integralRecord->type = commonDict::INTEGRAL_TYPE_LOTTERY;
+            $integralRecord->type = CommonDict::INTEGRAL_TYPE_LOTTERY;
             $integralRecord->save();
 
             // 获取该档位下的所有奖品
@@ -182,7 +182,7 @@ class LotteryService extends BaseService
         $integralRecord->user_tg_id = $transaction_info['user_tg_id'];
         $integralRecord->change_num = $transaction_info['transaction_integral_amount'];
         $integralRecord->transaction_id = $transaction_info['transaction_id'];
-        $integralRecord->type = commonDict::INTEGRAL_TYPE_TRANSACTION;
+        $integralRecord->type = CommonDict::INTEGRAL_TYPE_TRANSACTION;
         $integralRecord->save();
         // 更新用户积分
         Users::where('id', $transaction_info['user_id'])->inc('integral_num', $transaction_info['transaction_integral_amount'])->update([]);
@@ -330,7 +330,7 @@ class LotteryService extends BaseService
         try {
             $this->sendGiftToUser($order_info['user_tg_id'], $order_info['gift_tg_id']);
             LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
-                ->update(['award_status' => commonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
+                ->update(['award_status' => CommonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
         } catch (\Exception $e) {
             LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
                 ->update(['award_error_remark' => $e->getMessage()]);
@@ -352,14 +352,14 @@ class LotteryService extends BaseService
             throw new ApiException('Not found');
         }
         LotteryOrder::where(["user_id" => $this->user_id, "gift_tg_id" => $order_info['gift_tg_id'], 'award_status' => 0])
-            ->update(['award_status' => commonDict::AWARD_STATUS_TO_INTEGRAL, 'award_time' => time()]);
+            ->update(['award_status' => CommonDict::AWARD_STATUS_TO_INTEGRAL, 'award_time' => time()]);
         // 记录积分变动
         $integralRecord = new IntegralRecord();
         $integralRecord->user_id = $order_info['user_id'];
         $integralRecord->user_tg_id = $order_info['user_tg_id'];
         $integralRecord->change_num = $order_info['award_star'];
         $integralRecord->transaction_id = $order_info['order_uuid'];
-        $integralRecord->type = commonDict::INTEGRAL_TYPE_LOTTERY;
+        $integralRecord->type = CommonDict::INTEGRAL_TYPE_LOTTERY;
         $integralRecord->save();
         // 更新用户积分
         Users::where('id', $order_info['user_id'])->inc('integral_num', $order_info['award_star'])->update([]);
