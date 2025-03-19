@@ -1,6 +1,7 @@
 <?php
 // 应用公共文件
 
+use think\facade\Log;
 use think\Response;
 
 /**
@@ -52,7 +53,24 @@ function getGiftAnimationString($gift_tg_id)
 {
 	$json_file_path = public_path() . 'static/' . $gift_tg_id . '.json';
 	if (file_exists($json_file_path)) {
-		return file_get_contents($json_file_path);
+		$content = file_get_contents($json_file_path);
+		// 检查是否为有效的UTF-8编码
+		if (!mb_check_encoding($content, 'UTF-8')) {
+			// 尝试修复编码问题
+			$content = mb_convert_encoding($content, 'UTF-8', 'auto');
+			// 如果仍然无法转换为有效的UTF-8，返回空字符串
+			if (!mb_check_encoding($content, 'UTF-8')) {
+				Log::error('【文件编码有误】: ' . $gift_tg_id);
+				return "";
+			}
+		}
+		// 验证是否为有效的JSON
+		// json_decode($content);
+		// if (json_last_error() !== JSON_ERROR_NONE) {
+		// 	Log::error('Invalid JSON in gift animation file: ' . $gift_tg_id . ', Error: ' . json_last_error_msg());
+		// 	return "";
+		// }
+		return $content;
 	}
 	return "";
 }
