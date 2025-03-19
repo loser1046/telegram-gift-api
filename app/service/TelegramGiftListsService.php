@@ -42,6 +42,8 @@ class TelegramGiftListsService extends BaseService
                     'remaining_count' => $value['remaining_count'] ?? 0,
                     'total_count' => $value['total_count'] ?? 0,
                     'is_del' => 0,
+                    'create_time' => time(),
+                    'update_time' => time(),
                 ];
             }
             $now_lists = $this->model->select()->toArray();
