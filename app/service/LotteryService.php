@@ -51,10 +51,11 @@ class LotteryService extends BaseService
         if(isset($award["transaction_id"]) && isset($award["invoicelink"])){
             return $award;
         }
-        $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
+        // $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
         return [
             'raward_type' => 2, //礼物
             "gifts" => $award,
+            'lottery_id' => $award['lottery_id']
         ];
     }
     /**
@@ -163,6 +164,7 @@ class LotteryService extends BaseService
             $lottery_order_model->gift_is_limit = $award['is_limit'];
             $lottery_order_model->award_star = $award['star_price'];
             $lottery_order_model->save();
+            $award['lottery_id'] = $lottery_order_model->id;
 
             Db::commit();
         } catch (\Exception $e) {
