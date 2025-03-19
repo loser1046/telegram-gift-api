@@ -74,6 +74,8 @@ class LotteryService extends BaseService
         try {
             $transaction_id = (new Snowflake())->id();
 
+            Users::where('id', $this->user_id)->update(["first_lottery" => 0]);
+
             // 记录积分变动
             $integralRecord = new IntegralRecord();
             $integralRecord->user_id = $this->user_id;
@@ -94,6 +96,7 @@ class LotteryService extends BaseService
 
             // 更新用户积分
             Users::where('id', $this->user_id)->inc('integral_num', $integral)->update([]);
+
 
             Db::commit();
         } catch (\Exception $e) {
