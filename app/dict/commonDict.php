@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace app\dict;
 
-class CommonDict
+class commonDict
 {
     //首次抽奖获得
     const INTEGRAL_TYPE_FREE = 1;
