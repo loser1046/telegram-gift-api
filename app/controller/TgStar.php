@@ -3,6 +3,7 @@
 namespace app\controller;
 
 use app\BaseController;
+use app\service\LotteryService;
 use app\service\TgStarService;
 use think\facade\Log;
 use \TelegramBot\Api\BotApi;
@@ -56,7 +57,7 @@ class TgStar extends BaseController
      */
     public function starToIntegrayList()
     {
-        return success($this->tgStarService->starToIntegrayList());
+        return success((new LotteryService())->starToIntegrayList());
     }
 
     /**
