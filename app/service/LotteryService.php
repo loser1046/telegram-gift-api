@@ -262,10 +262,8 @@ class LotteryService extends BaseService
         foreach ($gifts as $gift) {
             $totalProbability += $gift['probability'];
         }
-        var_dump("总概率为：". $totalProbability);
         // 生成随机数
         $randomNum = mt_rand(1, 10000) / 10000 * $totalProbability;
-        var_dump("随机数为：". $randomNum);die;
         // 根据概率选择奖品
         $currentProbability = 0;
         foreach ($gifts as $gift) {
