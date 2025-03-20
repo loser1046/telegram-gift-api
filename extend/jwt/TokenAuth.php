@@ -37,9 +37,8 @@ class TokenAuth
 
         $token_payload['jti'] = (string) $user_id . "_" . $app_type;
         $token = JWT::encode($token_payload, config('jwt.secret_key', 'TelegramGiftBotApi$%^'), 'HS256');
-        // 如果 token 有效，延长缓存时间30天
-        $expire_auto_add_time = env('system.api_token_auto_add_time') ?? 3600;
-        Cache::tag("token")->set("token_" . $token_payload['jti'], $token, $expire_auto_add_time);
+        // 如果 token 有效，延长缓存时间7天
+        Cache::tag("token")->set("token_" . $token_payload['jti'], $token, $expire_time);
 
         return [
             'token' => $token,

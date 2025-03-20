@@ -1,5 +1,5 @@
 <?php
-declare (strict_types = 1);
+declare(strict_types=1);
 
 namespace app\service;
 
@@ -24,9 +24,14 @@ class UserService extends BaseService
      */
     public function login($login_code): array|Response
     {
+        $check = validateTelegramHash(env('telegram.token'), $login_code);
+        if (!$check) {
+            throw new ApiException('Auth failed!');
+        }
         parse_str($login_code, $output);
-        $request_user_data = json_decode(urldecode($output['user']),true);
-        if (!$request_user_data["id"]) return fail('tg_id is required!');
+        $request_user_data = json_decode(urldecode($output['user']), true);
+        if (!$request_user_data["id"])
+            return fail('tg_id is required!');
         $user = $this->model->where(['tg_id' => $request_user_data["id"]])->findOrEmpty()->toArray();
 
         if (empty($user)) {
@@ -81,8 +86,8 @@ class UserService extends BaseService
      */
     protected function createToken($user_info): ?array
     {
-        $expire_time = (int)config('jwt.ttl') ?? 3600;
-        $token_info = TokenAuth::createToken((int)$user_info['id'], "api", ['user_id' => $user_info['id'], 'tg_id' => $user_info['tg_id'], 'nick_name' => $user_info['nick_name']], $expire_time);
+        $expire_time = (int) config('jwt.ttl') ?? 3600;
+        $token_info = TokenAuth::createToken((int) $user_info['id'], "api", ['user_id' => $user_info['id'], 'tg_id' => $user_info['tg_id'], 'nick_name' => $user_info['nick_name']], $expire_time);
         return $token_info;
     }
 

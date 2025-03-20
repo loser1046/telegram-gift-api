@@ -82,15 +82,51 @@ function getGiftAnimationTgs($gift_tg_id)
 
 	if (file_exists($tgs_file_path)) {
 		return Response::create($tgs_file_path, 'file')->header(['Content-Type' => 'application/octet-stream', 'Content-Disposition' => 'inline; filename="' . $fileName . '"'])->cacheControl('public, max-age=86400');
-		// return Response::create($tgs_file_path, 'file')->header(['Content-Type'=>'application/octet-stream','Content-Disposition'=>'inline;'] )->cacheControl('public, max-age=86400');
 		// $content = file_get_contents($tgs_file_path);
-		// // 检查是否为有效的UTF-8编码
-		// if (!mb_check_encoding($content, 'UTF-8')) {
-		// }
-		return Response::create($tgs_file_path, 'file')
-			->header(['Content-Type' => 'application/x-tgsticker'])
-			->cacheControl('public, max-age=86400');
+
+		// return Response::create($tgs_file_path, 'file')
+		// 	->header(['Content-Type' => 'application/x-tgsticker'])
+		// 	->cacheControl('public, max-age=86400');
 	} else {
 		return fail('File not found', http_code: 404);
 	}
+}
+
+
+function validateTelegramHash($botToken, $telegramInitData)
+{
+	// 解析参数并保留原始编码值
+	$params = explode('&', $telegramInitData);
+	$data = [];
+	foreach ($params as $param) {
+		$pair = explode('=', $param, 2);
+		$key = urldecode($pair[0]);
+		$value = $pair[1] ?? '';
+		$data[$key] = $value;
+	}
+
+	if (!env('APP_DEBUG') && isset($data['auth_date']) && time() - $data['auth_date'] > 300) {
+		return false;
+	}
+
+	// 提取并移除hash参数
+	if (!isset($data['hash'])) {
+		return false;
+	}
+	$hash = $data['hash'];
+	unset($data['hash']);
+	// 按键名排序
+	ksort($data);
+	// 构造数据校验字符串
+	$dataCheckStrings = [];
+	foreach ($data as $k => $v) {
+		$dataCheckStrings[] = "{$k}={$v}";
+	}
+	$dataCheckString = implode("\n", $dataCheckStrings);
+	// 生成签名密钥
+	$secretKey = hash_hmac('sha256', $botToken, 'WebAppData', true);
+	// 计算哈希值
+	$calculatedHash = hash_hmac('sha256', $dataCheckString, $secretKey);
+	// 安全比较哈希值
+	return hash_equals($calculatedHash, $hash);
 }
