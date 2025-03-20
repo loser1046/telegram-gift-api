@@ -20,14 +20,11 @@ class TelegramGiftListsService extends BaseService
      * 同步telegram礼物列表
      * @return mixed
      */
-    public function telegramGiftSyn($test): mixed
+    public function telegramGiftSyn(): mixed
     {
-        if(!$test){
-            $this->telegram = new BotApi(env('telegram.token_pro'));
-        }
         try {
             //同步telegram的礼物列表
-            $lists = $this->telegram->call("getAvailableGifts",test:$test);
+            $lists = $this->telegram->call("getAvailableGifts");
             if (empty($lists) || !isset($lists['gifts']) || empty($lists['gifts'])) {
                 return false;
             }
@@ -62,11 +59,8 @@ class TelegramGiftListsService extends BaseService
         return $lists['gifts'];
     }
 
-    public function telegramGiftAnimationSyn($gifts,$test)
+    public function telegramGiftAnimationSyn($gifts)
     {
-        if(!$test){
-            $this->telegram = new BotApi(env('telegram.token_pro'));
-        }
         try {
             $stickersDir = public_path() . 'static/stickers/';
             $jsonDir = public_path() . 'static/json/';
@@ -79,7 +73,7 @@ class TelegramGiftListsService extends BaseService
             
             foreach ($gifts as $value) {
                 $file_id = $value['sticker']['file_id'];
-                $animation = $this->telegram->downloadFile($file_id,$test);
+                $animation = $this->telegram->downloadFile($file_id);
                 $tgsFilePath = $stickersDir . $value['id'] . '.tgs';
                 $jsonFilePath = $jsonDir . $value['id'] . '.json';
 
