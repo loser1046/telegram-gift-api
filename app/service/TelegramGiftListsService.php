@@ -20,11 +20,14 @@ class TelegramGiftListsService extends BaseService
      * 同步telegram礼物列表
      * @return mixed
      */
-    public function telegramGiftSyn(): mixed
+    public function telegramGiftSyn($test): mixed
     {
+        if(!$test){
+            $this->telegram = new BotApi(env('telegram.token_pro'));
+        }
         try {
             //同步telegram的礼物列表
-            $lists = $this->telegram->call("getAvailableGifts");
+            $lists = $this->telegram->call("getAvailableGifts",test:$test);
             if (empty($lists) || !isset($lists['gifts']) || empty($lists['gifts'])) {
                 return false;
             }
@@ -59,8 +62,11 @@ class TelegramGiftListsService extends BaseService
         return $lists['gifts'];
     }
 
-    public function telegramGiftAnimationSyn($gifts)
+    public function telegramGiftAnimationSyn($gifts,$test)
     {
+        if(!$test){
+            $this->telegram = new BotApi(env('telegram.token_pro'));
+        }
         try {
             $stickersDir = public_path() . 'static/stickers/';
             $jsonDir = public_path() . 'static/json/';
@@ -73,7 +79,7 @@ class TelegramGiftListsService extends BaseService
             
             foreach ($gifts as $value) {
                 $file_id = $value['sticker']['file_id'];
-                $animation = $this->telegram->downloadFile($file_id);
+                $animation = $this->telegram->downloadFile($file_id,$test);
                 $tgsFilePath = $stickersDir . $value['id'] . '.tgs';
                 $jsonFilePath = $jsonDir . $value['id'] . '.json';
 
@@ -108,8 +114,8 @@ class TelegramGiftListsService extends BaseService
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return false;
             }
-            
-            return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            return $decompressed;
+            // return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             var_dump('解压tgs文件失败: ' . $e->getMessage());
             return false;

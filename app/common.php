@@ -51,7 +51,7 @@ function quickRandom($length = 12)
 
 function getGiftAnimationString($gift_tg_id)
 {
-	$json_file_path = public_path() . 'static/' . $gift_tg_id . '.json';
+	$json_file_path = public_path() . 'static/json/' . $gift_tg_id . '.json';
 	if (file_exists($json_file_path)) {
 		$content = file_get_contents($json_file_path);
 		// 检查是否为有效的UTF-8编码

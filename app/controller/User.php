@@ -66,6 +66,6 @@ class User extends BaseController
 
     public function getGiftAnimation($gift_tg_id)
     {
-        return (new GiftService())->getGiftAnimation($gift_tg_id);
+        return success((new GiftService())->getGiftAnimation($gift_tg_id));
     }
 }
