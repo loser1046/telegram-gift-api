@@ -59,7 +59,7 @@ class TokenAuth
                 $token_info = json_decode(json_encode($payload), true);
                 // 检查 token 是否在缓存中
                 $cached_tokens = Cache::get('token_' . $token_info['jti']);
-                if (!$cached_tokens) {
+                if (!$cached_tokens || $cached_tokens !== $token) {
                     return [];
                 }
                 return $token_info;
