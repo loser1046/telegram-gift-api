@@ -74,3 +74,23 @@ function getGiftAnimationString($gift_tg_id)
 	}
 	return "";
 }
+
+function getGiftAnimationTgs($gift_tg_id)
+{
+	$tgs_file_path = public_path() . 'static/stickers/' . $gift_tg_id . '.tgs';
+	$fileName = $gift_tg_id . '.tgs';               // 替换为实际文件名
+
+	if (file_exists($tgs_file_path)) {
+		return Response::create($tgs_file_path, 'file')->header(['Content-Type' => 'application/octet-stream', 'Content-Disposition' => 'inline; filename="' . $fileName . '"'])->cacheControl('public, max-age=86400');
+		// return Response::create($tgs_file_path, 'file')->header(['Content-Type'=>'application/octet-stream','Content-Disposition'=>'inline;'] )->cacheControl('public, max-age=86400');
+		// $content = file_get_contents($tgs_file_path);
+		// // 检查是否为有效的UTF-8编码
+		// if (!mb_check_encoding($content, 'UTF-8')) {
+		// }
+		return Response::create($tgs_file_path, 'file')
+			->header(['Content-Type' => 'application/x-tgsticker'])
+			->cacheControl('public, max-age=86400');
+	} else {
+		return fail('File not found', http_code: 404);
+	}
+}

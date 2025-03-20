@@ -26,6 +26,9 @@ class Syn extends Command
         $giftService = new TelegramGiftListsService();
         $output->writeln('开始同步礼物列表。。。');
         $lists = $giftService->telegramGiftSyn();
+        if (empty($lists)) {
+            $output->writeln('礼物列表为空~');
+        }
         $output->writeln('礼物列表同步完成。。。');
         $output->writeln('开始同步礼物动画。。。');
         $giftService->telegramGiftAnimationSyn($lists);

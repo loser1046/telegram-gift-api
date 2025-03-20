@@ -66,21 +66,6 @@ class User extends BaseController
 
     public function getGiftAnimation($gift_tg_id)
     {
-        return success((new GiftService())->getGiftAnimation($gift_tg_id));
+        return (new GiftService())->getGiftAnimation($gift_tg_id);
     }
-
-    public function getGiftFile()
-    {
-        $filePath = public_path().'static/stickers/file_0.tgs';  // 替换为实际文件路径
-        $fileName = 'file.tgs';               // 替换为实际文件名
-        return Response::create($filePath, 'file')->header(['Content-Type'=>'application/octet-stream','Content-Disposition'=>'inline; filename="'. $fileName. '"'] )->cacheControl('public, max-age=86400');
-
-        // 使用sendfile方法发送文件
-        // return response()->sendfile($filePath, 'application/octet-stream', [
-        //     'Content-Disposition' => 'inline; filename="' . $fileName . '"'
-        // ]);
-        // $gift_animation = $this->telegram->getFile($gift_tg_id);
-        // return download(public_path().'static/stickers/file_0.tgs', 'file_0.tgs')->force(false);
-    }
-
 }

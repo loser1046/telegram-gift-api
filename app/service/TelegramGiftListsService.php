@@ -16,10 +16,13 @@ class TelegramGiftListsService extends BaseService
         $this->model = new TelegramGiftLists();
     }
 
-    public function telegramGiftSyn()
+    /**
+     * 同步telegram礼物列表
+     * @return mixed
+     */
+    public function telegramGiftSyn(): mixed
     {
         try {
-
             //同步telegram的礼物列表
             $lists = $this->telegram->call("getAvailableGifts");
             if (empty($lists) || !isset($lists['gifts']) || empty($lists['gifts'])) {
@@ -48,7 +51,7 @@ class TelegramGiftListsService extends BaseService
             }
             $now_lists = $this->model->select()->toArray();
             if (empty($now_lists)) {
-                // $this->model->insertAll($new_gift_list);
+                $this->model->insertAll($new_gift_list);
             }
         } catch (\Exception $e) {
             var_dump($e->getMessage());
@@ -59,13 +62,57 @@ class TelegramGiftListsService extends BaseService
     public function telegramGiftAnimationSyn($gifts)
     {
         try {
+            $stickersDir = public_path() . 'static/stickers/';
+            $jsonDir = public_path() . 'static/json/';
+            if (!is_dir($stickersDir)) {
+                mkdir($stickersDir, 0755, true);
+            }
+            if (!is_dir($jsonDir)) {
+                mkdir($jsonDir, 0755, true);
+            }
+            
             foreach ($gifts as $value) {
                 $file_id = $value['sticker']['file_id'];
                 $animation = $this->telegram->downloadFile($file_id);
-                file_put_contents(public_path() . 'static/stickers/' . $value['id'] . '.tga', $animation);
+                $tgsFilePath = $stickersDir . $value['id'] . '.tgs';
+                $jsonFilePath = $jsonDir . $value['id'] . '.json';
+
+                // 保存tgs文件
+                file_put_contents($tgsFilePath, $animation);
+                //  解析tgs文件为JSON tgs文件是gzip压缩的JSON，需要解压
+                $decompressed = $this->decompressTgsToJson($animation);
+                if ($decompressed) {
+                    file_put_contents($jsonFilePath, $decompressed);
+                }
             }
         } catch (\Exception $e) {
             var_dump($e->getMessage());
+        }
+    }
+    
+    /**
+     * 将tgs格式解压为JSON
+     * @param string $tgsData tgs二进制数据
+     * @return string|false 解压后的JSON字符串，失败返回false
+     */
+    private function decompressTgsToJson(string $tgsData)
+    {
+        try {
+            $decompressed = gzdecode($tgsData);
+            if ($decompressed === false) {
+                return false;
+            }
+            
+            // 验证是否有效的JSON
+            $json = json_decode($decompressed);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return false;
+            }
+            
+            return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            var_dump('解压tgs文件失败: ' . $e->getMessage());
+            return false;
         }
     }
 }
