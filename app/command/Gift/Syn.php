@@ -24,6 +24,11 @@ class Syn extends Command
         // 指令输出
         // $output->writeln('gift:syn');
         $giftService = new TelegramGiftListsService();
-        $giftService->telegramGiftSyn();
+        $output->writeln('开始同步礼物列表。。。');
+        $lists = $giftService->telegramGiftSyn();
+        $output->writeln('礼物列表同步完成。。。');
+        $output->writeln('开始同步礼物动画。。。');
+        $giftService->telegramGiftAnimationSyn($lists);
+        $output->writeln('礼物动画同步完成。。。');
     }
 }

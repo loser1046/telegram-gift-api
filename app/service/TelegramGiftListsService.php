@@ -48,11 +48,24 @@ class TelegramGiftListsService extends BaseService
             }
             $now_lists = $this->model->select()->toArray();
             if (empty($now_lists)) {
-                $this->model->insertAll($new_gift_list);
+                // $this->model->insertAll($new_gift_list);
             }
         } catch (\Exception $e) {
             var_dump($e->getMessage());
         }
+        return $lists['gifts'];
+    }
 
+    public function telegramGiftAnimationSyn($gifts)
+    {
+        try {
+            foreach ($gifts as $value) {
+                $file_id = $value['sticker']['file_id'];
+                $animation = $this->telegram->downloadFile($file_id);
+                file_put_contents(public_path() . 'static/stickers/' . $value['id'] . '.tga', $animation);
+            }
+        } catch (\Exception $e) {
+            var_dump($e->getMessage());
+        }
     }
 }

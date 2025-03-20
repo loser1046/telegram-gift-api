@@ -13,6 +13,7 @@ Route::group( function () {
     Route::get('allRankList', 'Rank/getAllRankList');
 
     Route::post('tgCallback', 'TgStar/tgCallback');
+    // Route::get('getGiftFile', 'User/getGiftFile');
 });
 
 Route::group( function () {

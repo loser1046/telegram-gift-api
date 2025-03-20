@@ -5,6 +5,7 @@ namespace app\service;
 
 use app\model\Gifts;
 use app\model\LotteryType;
+use \TelegramBot\Api\BotApi;
 
 class GiftService extends BaseService
 {
@@ -12,6 +13,7 @@ class GiftService extends BaseService
     {
         parent::__construct();
         $this->model = new Gifts();
+        $this->telegram = new BotApi(env('telegram.token'));
     }
 
     /**
@@ -89,6 +91,12 @@ class GiftService extends BaseService
             'gift_tg_id' => $gift_tg_id,
             'gift_animation' =>  getGiftAnimationString($gift_tg_id)
         ];
+    }
+
+    public function getGiftFile($gift_tg_id)
+    {
+        // $gift_animation = $this->telegram->getFile($gift_tg_id);
+        download(public_path().'static/stickers/file_0.tgs', 'file_0.tgs')->force(false);
     }
 
 }
