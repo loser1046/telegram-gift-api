@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace app\service;
 
 use app\dict\commonDict;
+use app\dict\lotteryDict;
 use app\exception\ApiException;
 use app\model\Gifts;
 use app\model\LotteryOrder;
@@ -42,7 +43,7 @@ class LotteryService extends BaseService
         if (empty($hasLottery)) {
             $integral = $this->doLotteryIntegralFree($giftType);
             return [
-                'raward_type' => 1, //积分
+                'raward_type' => lotteryDict::AWARD_TYPE_INTEGRAL, //积分
                 'integral' => $integral
             ];
         }
@@ -53,7 +54,7 @@ class LotteryService extends BaseService
         }
         $award["gift_animation"] = getGiftAnimationString($award['gift_tg_id']);
         return [
-            'raward_type' => 2, //礼物
+            'raward_type' => lotteryDict::AWARD_TYPE_GIFT, //礼物
             "gifts" => $award,
             'lottery_id' => $award['lottery_id']
         ];

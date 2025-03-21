@@ -1,9 +1,9 @@
 <?php
-declare (strict_types = 1);
+declare(strict_types=1);
 
 namespace app\command\Gift;
 
-use app\dict\giftDict;
+use app\dict\lotteryDict;
 use app\model\Gifts;
 use app\model\LotteryType;
 use app\model\TelegramGiftLists;
@@ -15,6 +15,7 @@ use think\console\Output;
 
 class InitGifts extends Command
 {
+    protected $output;
     protected function configure()
     {
         // 指令配置
@@ -24,6 +25,8 @@ class InitGifts extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        $this->output = $output;
+
         // 指令输出
         // $output->writeln('gift:initGifts');
         $telegram_gift_lists = TelegramGiftLists::select()->toArray();
@@ -36,52 +39,83 @@ class InitGifts extends Command
             $output->writeln('奖品列表已有数据！！！');
             return false;
         }
-        $gift_types = LotteryType::select()->toArray();
-        if (empty($gift_types)) {
+        $lottery_types = LotteryType::select()->toArray();
+        if (empty($lottery_types)) {
             $output->writeln('抽奖类型为空！！！');
             return false;
         }
-        $this->insertGiftsByDict($gift_types, $telegram_gift_lists);
+        $this->insertGiftsByDict($lottery_types, $telegram_gift_lists);
         $output->writeln('写入成功');
     }
 
-    protected function insertGiftsByDict($gift_types, $telegram_gift_lists)
+    protected function insertGiftsByDict($lottery_types, $telegram_gift_lists)
     {
         $insert = [];
-        $gift_list = giftDict::GIFT_LIST;
-        foreach ($gift_list as $lottery_key => $lottery_list) {
-            $integral = $lottery_list['integral'];
-            $gift_type = $this->getGifttypeByLotteryintegral($integral, $gift_types);
-            foreach ($lottery_list['lottery'] as $lottery_info) {
+        $lottery_list = lotteryDict::LOTTERY_LIST;
+        foreach ($lottery_list as $lottery_key => $lottery_items) {
+            $lottery_integral = $lottery_items['lottery_integral'];
+            $lottery_type_id = $this->getGifttypeByLotteryintegral($lottery_integral, $lottery_types);
+            foreach ($lottery_items['lottery'] as $lottery_info) {
+                $award_type = $lottery_info['award_type'];
                 $probability = $lottery_info['probability'];
-                foreach ($lottery_info['gifts'] as $gift_one) {
-                    $gift_one_info = $this->getGiftinfoByGifttgid($gift_one, $telegram_gift_lists);
-                    if (empty($gift_one_info)) {
-                        continue;
+                if ($award_type == lotteryDict::AWARD_TYPE_GIFT) {
+                    foreach ($lottery_info['tg_gift_ids'] as $gift_tg_id) {
+                        $gift_one_info = $this->getGiftinfoByGifttgid($gift_tg_id, $telegram_gift_lists);
+                        if (empty($gift_one_info)) {
+                            $this->output->writeln('奖品tgid不存在--' . $gift_tg_id . '--');
+                            continue;
+                        }
+                        // var_dump($gift_one_info);
+                        $insert[] = [
+                            "lottery_type_id" => $lottery_type_id,
+                            "award_type" => $award_type,
+                            "probability" => $probability,
+                            "star_price" => $gift_one_info["star_count"],
+                            "integral_price" => 0,
+                            "is_limit" => $gift_one_info["is_limit"],
+                            "occurrence_num" => 0,
+                            "gift_tg_id" => $gift_one_info["gift_tg_id"],
+                            "emoji" => $gift_one_info["emoji"],
+                            "custom_emoji_id" => $gift_one_info["custom_emoji_id"],
+                            "file_id" => $gift_one_info["file_id"],
+                            "file_unique_id" => $gift_one_info["file_unique_id"],
+                            "star_count" => $gift_one_info["star_count"],
+                            "upgrade_star_count" => $gift_one_info["upgrade_star_count"],
+                            "top_show" => 0,
+                            "create_time" => time(),
+                            "update_time" => time()
+                        ];
                     }
-                    var_dump($gift_one_info);
+                } else {
                     $insert[] = [
-                        "gift_type" => $gift_type,
+                        "lottery_type_id" => $lottery_type_id,
+                        "award_type" => $award_type,
                         "probability" => $probability,
-                        "star_price" => $gift_one_info["star_count"],
-                        "is_limit" => $gift_one_info["is_limit"],
+                        "star_price" => 0,
+                        "integral_price" => $lottery_info['integral_price'],
+                        "is_limit" => 0,
                         "occurrence_num" => 0,
-                        "gift_tg_id" => $gift_one_info["gift_tg_id"],
-                        "emoji" => $gift_one_info["emoji"],
-                        "custom_emoji_id" => $gift_one_info["custom_emoji_id"],
-                        "file_id" => $gift_one_info["file_id"],
-                        "file_unique_id" => $gift_one_info["file_unique_id"],
-                        "star_count" => $gift_one_info["star_count"],
-                        "upgrade_star_count" => $gift_one_info["upgrade_star_count"],
+                        "gift_tg_id" => 0,
+                        "emoji" => '',
+                        "custom_emoji_id" => '',
+                        "file_id" => '',
+                        "file_unique_id" => '',
+                        "star_count" => 0,
+                        "upgrade_star_count" => 0,
                         "top_show" => 0,
                         "create_time" => time(),
                         "update_time" => time()
                     ];
                 }
+
             }
         }
+        if (empty($insert)) {
+            $this->output->writeln('写入数据为空！！！');
+            return false;
+        }
+        var_dump($insert);
         Gifts::insertAll($insert);
-
     }
 
     /**
@@ -89,16 +123,16 @@ class InitGifts extends Command
      *
      * @return void
      */
-    protected function insertGiftsByRandom($gift_types, $telegram_gift_lists)
+    protected function insertGiftsByRandom($lottery_types, $telegram_gift_lists)
     {
         $insert = [];
-        foreach ($gift_types as $gift_type) {
+        foreach ($lottery_types as $lottery_type) {
             // 随机打乱数组并截取前10条数据
             $random_keys = array_rand($telegram_gift_lists, min(10, count($telegram_gift_lists)));
-            foreach ((array)$random_keys as $key) {
+            foreach ((array) $random_keys as $key) {
                 $gift_one = $telegram_gift_lists[$key];
                 $insert[] = [
-                    "gift_type" => $gift_type['id'],
+                    "lottery_type_id" => $lottery_type['id'],
                     "probability" => round(mt_rand(1, 10) / 100, 2),
                     "star_price" => $gift_one["star_count"],
                     "is_limit" => $gift_one["is_limit"],
@@ -127,11 +161,11 @@ class InitGifts extends Command
         return [];
     }
 
-    protected function getGifttypeByLotteryintegral($lottery_integral, $gift_types)
+    protected function getGifttypeByLotteryintegral($lottery_integral, $lottery_types)
     {
-        foreach ($gift_types as $gift_type) {
-            if ($gift_type["pay_integral"] == $lottery_integral) {
-                return $gift_type["id"];
+        foreach ($lottery_types as $lottery_type) {
+            if ($lottery_type["pay_integral"] == $lottery_integral) {
+                return $lottery_type["id"];
             }
         }
         return [];

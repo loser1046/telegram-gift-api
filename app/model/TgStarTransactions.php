@@ -20,7 +20,7 @@ class TgStarTransactions extends Model
 	public function gifts()
 	{
 		return $this->hasOne(Gifts::class, 'id', 'gift_id')->joinType('left')
-			->withField('id,gift_type,probability,star_price,is_limit,gift_tg_id,emoji,custom_emoji_id,file_id,file_unique_id');
+			->withField('id,lottery_type_id,probability,star_price,is_limit,gift_tg_id,emoji,custom_emoji_id,file_id,file_unique_id');
 	}
 
     public function user()

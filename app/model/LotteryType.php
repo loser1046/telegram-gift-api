@@ -17,7 +17,7 @@ class LotteryType extends Model
      */
     public function gifts()
     {
-        return $this->hasMany(Gifts::class, 'gift_type', 'id')
+        return $this->hasMany(Gifts::class, 'lottery_type_id', 'id')
         ->withoutField('create_time,update_time');
     }
 }

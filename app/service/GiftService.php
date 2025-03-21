@@ -17,16 +17,6 @@ class GiftService extends BaseService
     }
 
     /**
-     * 获取所有奖品
-     * @return array
-     */
-    public function getAll()
-    {
-        $gifts = $this->model->select()->toArray();
-        return $gifts;
-    }
-
-    /**
      * 获取所有置顶奖品
      * @return array
      */
@@ -62,9 +52,9 @@ class GiftService extends BaseService
      */
     public function getGiftsByType(int $typeId)
     {
-        $gifts = $this->model->where('gift_type', $typeId)
+        $gifts = $this->model->where('lottery_type_id', $typeId)
             ->withoutField("create_time,update_time")
-            ->order(['star_price'=>'asc'])
+            ->order(['probability'=>'asc'])
             ->select()
             ->toArray();
         return $gifts;
