@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace app\service;
 
+use app\dict\commonDict;
 use app\exception\ApiException;
 use app\model\TgStarIntegral;
 use app\model\TgStarTransactions;
@@ -148,7 +149,7 @@ class TgStarService extends BaseService
                 ]);
             // 抽奖 && 发放奖品
             try {
-                (new LotteryService())->addIntergralRecord($transaction_info);
+                (new LotteryService())->addIntergralRecord($transaction_info,commonDict::INTEGRAL_TYPE_TRANSACTION);
             } catch (\Exception $e) {
                 // 处理抽奖失败的情况，例如记录错误日志
                 Log::error('【Invalid transaction - doLotteryGift Error】: ' . $e->getMessage() . json_encode($successfulPayment));

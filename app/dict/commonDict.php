@@ -14,6 +14,8 @@ class commonDict
     const INTEGRAL_TYPE_TRANSACTION = 3;
     //分解礼物获得
     const INTEGRAL_TYPE_GIFT = 4;
+    //抽奖获取
+    const INTEGRAL_TYPE_LOTTERY_AWARD = 5;
 
     /***************************奖品使用状态*************************/
     //未使用
