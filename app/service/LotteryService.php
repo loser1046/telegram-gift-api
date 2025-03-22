@@ -343,6 +343,11 @@ class LotteryService extends BaseService
         return $star_to_integray_list;
     }
 
+    /**
+     * 兑换为礼物发放
+     * @param array $params 兑换参数
+     * @return array 兑换结果
+     **/
     public function giftToGift($id)
     {
         $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
@@ -372,13 +377,13 @@ class LotteryService extends BaseService
             $this->sendGiftToUser($order_info['user_tg_id'], $order_info['gift_tg_id']);
             LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
                 ->update(['award_status' => commonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
-
             $this->releaseLock($lockKey);
+            $this->clearCacheByTag('user_gifts:' . $this->user_id);
         } catch (\Exception $e) {
-
             $this->releaseLock($lockKey);
             LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
                 ->update(['award_error_remark' => $e->getMessage()]);
+            $this->clearCacheByTag('user_gifts:' . $this->user_id);
             Log::error('【礼物兑换失败】：' . $e->getMessage());
             throw new ApiException('Gift exchange failed');
         }
@@ -388,6 +393,12 @@ class LotteryService extends BaseService
         ];
     }
 
+    /**
+     * 分解为积分
+     * @param mixed $id
+     * @throws \app\exception\ApiException
+     * @return array{gift_tg_id: mixed, integral_num: mixed}
+     */
     public function giftToIntegral($id)
     {
         $order_info = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
@@ -422,12 +433,11 @@ class LotteryService extends BaseService
                 'transaction_id' => $order_info['order_uuid'],
                 'transaction_integral_amount' => $order_info['award_star'],
             ], commonDict::INTEGRAL_TYPE_GIFT);
-
-
             $this->releaseLock($lockKey);
+            $this->clearCacheByTag('user_gifts:' . $this->user_id);
         } catch (\Exception $e) {
-
             $this->releaseLock($lockKey);
+            $this->clearCacheByTag('user_gifts:' . $this->user_id);
             Log::error('【礼物兑换积分失败】：' . $e->getMessage());
             throw new ApiException('Gift to integral exchange failed');
         }
