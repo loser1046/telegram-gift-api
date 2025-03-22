@@ -4,7 +4,6 @@ namespace app\controller;
 
 use app\BaseController;
 use app\service\RankService;
-use app\validate\Page;
 
 class Rank extends BaseController
 {

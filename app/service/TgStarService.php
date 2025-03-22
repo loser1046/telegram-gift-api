@@ -33,7 +33,10 @@ class TgStarService extends BaseService
     public function doBuyIntegral($type_id)
     {
         // 获取档位信息
-        $priceInfo = TgStarIntegral::where(["id" => $type_id, "is_show" => 1])->findOrEmpty()->toArray();
+        $priceInfo = $this->getCache('tgstar:integral_'.$type_id, function() use ($type_id) {
+            return TgStarIntegral::where(["id" => $type_id, "is_show" => 1])->findOrEmpty()->toArray();
+        }, 3600, 'tgstar_integral');
+        
         if (empty($priceInfo)) {
             throw new ApiException('Not found');
         }
@@ -152,7 +155,7 @@ class TgStarService extends BaseService
                 (new LotteryService())->addIntergralRecord($transaction_info,commonDict::INTEGRAL_TYPE_TRANSACTION);
             } catch (\Exception $e) {
                 // 处理抽奖失败的情况，例如记录错误日志
-                Log::error('【Invalid transaction - doLotteryGift Error】: ' . $e->getMessage() . json_encode($successfulPayment));
+                Log::error('【Invalid transaction - addIntergralRecord Error】: ' . $e->getMessage() . json_encode($successfulPayment));
                 return false;
             }
             return true;

@@ -5,6 +5,7 @@ namespace app\service;
 use app\validate\Page;
 use think\Model;
 use think\facade\Lang;
+use think\facade\Cache;
 use \TelegramBot\Api\BotApi;
 
 /**
@@ -131,4 +132,77 @@ abstract class BaseService
         return $list->toArray();
     }
 
+    /**
+     * 通用缓存方法
+     * @param string $key 缓存键名
+     * @param callable $callback 回调函数，用于获取数据
+     * @param int $expire 过期时间（秒），默认1小时
+     * @param string $tag 缓存标签，用于批量删除
+     * @return mixed
+     */
+    protected function getCache(string $key, callable $callback, int $expire = 3600, string $tag = '')
+    {
+        // 尝试从缓存获取数据
+        $data = Cache::get($key);
+        
+        // 如果缓存中没有数据，则执行回调函数获取数据并缓存
+        if ($data === null) {
+            $data = call_user_func($callback);
+            
+            // 如果有标签，则使用标签缓存
+            if (!empty($tag)) {
+                Cache::tag($tag)->set($key, $data, $expire);
+            } else {
+                Cache::set($key, $data, $expire);
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * 删除指定键的缓存
+     * @param string $key 缓存键名
+     * @return bool
+     */
+    protected function deleteCache(string $key)
+    {
+        return Cache::delete($key);
+    }
+    
+    /**
+     * 删除指定标签的所有缓存
+     * @param string $tag 缓存标签
+     * @return bool
+     */
+    protected function clearCacheByTag(string $tag)
+    {
+        return Cache::tag($tag)->clear();
+    }
+
+    /**
+     * 获取Redis锁
+     * @param string $key 锁的键名
+     * @param int $expire 锁的过期时间（秒）
+     * @return bool 是否成功获取锁
+     */
+    protected function getLock(string $key, int $expire = 10): bool
+    {
+        // 使用Redis的setnx命令尝试获取锁
+        $lockKey = 'lock:' . $key;
+        $redis = Cache::store('redis')->handler();
+        $result = $redis->set($lockKey, time(), ['NX', 'EX' => $expire]);
+        return $result ? true : false;
+    }
+    
+    /**
+     * 释放Redis锁
+     * @param string $key 锁的键名
+     * @return bool 是否成功释放锁
+     */
+    protected function releaseLock(string $key): bool
+    {
+        $lockKey = 'lock:' . $key;
+        return Cache::store('redis')->delete($lockKey);
+    }
 }
