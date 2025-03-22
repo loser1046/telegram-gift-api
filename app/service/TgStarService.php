@@ -98,6 +98,8 @@ class TgStarService extends BaseService
             return false;
         }
 
+        $redis_key = 'tgstar:transaction_' . $transaction_id . '_' . $transaction_info['user_id'];
+
         if (
             $transaction_info["pay_status"] == 0 &&
             $preCheckoutQuery["currency"] == "XTR" &&
@@ -114,6 +116,7 @@ class TgStarService extends BaseService
                 Log::error('【Invalid transaction - Not Match1】: ' . json_encode($preCheckoutQuery));
                 TgStarTransactions::where('transaction_id', $transaction_id)
                     ->update(['pay_status' => -1]);
+                $this->deleteCache($redis_key);
             }
             $this->telegram->answerPreCheckoutQuery($preCheckoutQuery['id'], false, 'Invalid transaction');
             Log::debug("answer成功");
@@ -136,6 +139,8 @@ class TgStarService extends BaseService
             return false;
         }
 
+        $redis_key = 'tgstar:transaction_' . $transaction_id . '_' . $transaction_info['user_id'];
+
         if (
             $transaction_info["pay_status"] == 0 &&
             $successfulPayment["currency"] == "XTR" &&
@@ -150,11 +155,13 @@ class TgStarService extends BaseService
                     "pay_star_amount" => $successfulPayment['total_amount'] ?? 0,
                     "pay_time" => $successfulPayment['date'] ?? time()
                 ]);
+            
+            $this->deleteCache($redis_key);
             // 抽奖 && 发放奖品
             try {
                 (new LotteryService())->addIntergralRecord($transaction_info,commonDict::INTEGRAL_TYPE_TRANSACTION);
             } catch (\Exception $e) {
-                // 处理抽奖失败的情况，例如记录错误日志
+                // 处理增加积分失败的情况，记录错误日志
                 Log::error('【Invalid transaction - addIntergralRecord Error】: ' . $e->getMessage() . json_encode($successfulPayment));
                 return false;
             }
@@ -170,6 +177,7 @@ class TgStarService extends BaseService
                     "pay_star_amount" => $successfulPayment['total_amount'] ?? 0,
                     "pay_time" => $successfulPayment['date'] ?? 0,
                 ]);
+            $this->deleteCache($redis_key);
             return false;
         }
     }
@@ -192,25 +200,32 @@ class TgStarService extends BaseService
     }
 
     /**
-     * 处理Telegram回调请求
-     * @param string|int $transaction_id 请求数据
-     * @return mixed
+     * 处理前端轮训请求
+     * @param string|int $transaction_id 订单ID
+     * @return array
+     * 
      */
-    public function getRecordByTransactionId($transaction_id)
+    public function getRecordByTransactionId($transaction_id): array
     {
-        $transaction_info = TgStarTransactions::where(['transaction_id' => $transaction_id, "user_id" => $this->user_id])
-            ->field("transaction_id,pay_status,pay_star_amount,pay_time,transaction_star_amount,transaction_integral_amount")
-            ->findOrEmpty()
-            ->toArray();
-        if (empty($transaction_info)) {
-            throw new ApiException("Not found");
-        }
-        $user_integral_balance = Users::where('id', $this->user_id)->value('integral_num');
+        // 使用缓存，减轻数据库压力
+        // 缓存键包含transaction_id和user_id确保唯一性
+        $cacheKey = 'tgstar:transaction_' . $transaction_id . '_' . $this->user_id;
+        
+        return $this->getCache($cacheKey, function() use ($transaction_id) {
+            $transaction_info = TgStarTransactions::where(['transaction_id' => $transaction_id, "user_id" => $this->user_id])
+                ->field("transaction_id,pay_status,pay_star_amount,pay_time,transaction_star_amount,transaction_integral_amount")
+                ->findOrEmpty()
+                ->toArray();
+            if (empty($transaction_info)) {
+                throw new ApiException("Not found");
+            }
+            $user_integral_balance = Users::where('id', $this->user_id)->value('integral_num');
 
-        return [
-            "transaction_info" => $transaction_info,
-            "user_integral_balance" => $user_integral_balance
-        ];
+            return [
+                "transaction_info" => $transaction_info,
+                "user_integral_balance" => $user_integral_balance
+            ];
+        }, 5); // 设置较短的缓存时间(5秒)，平衡性能和数据实时性
     }
 
 }

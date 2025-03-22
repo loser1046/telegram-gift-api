@@ -34,10 +34,10 @@ class LotteryService extends BaseService
     public function createTransaction(int $typeId)
     {
         // 获取档位信息
-        $giftType = $this->getCache('lottery:type_'.$typeId, function() use ($typeId) {
+        $giftType = $this->getCache('lottery:type_' . $typeId, function () use ($typeId) {
             return LotteryType::where(["id" => $typeId, "show" => 1])->findOrEmpty()->toArray();
         }, 3600, 'lottery_types');
-        
+
         if (empty($giftType)) {
             throw new ApiException('Lottery type not found');
         }
@@ -53,7 +53,7 @@ class LotteryService extends BaseService
         }
         // 执行付费抽奖逻辑
         $award = $this->doLotteryIntegral($giftType);
-        if(isset($award["transaction_id"]) && isset($award["invoicelink"])){
+        if (isset($award["transaction_id"]) && isset($award["invoicelink"])) {
             return $award;
         }
         if ($award["award_type"] == lotteryDict::AWARD_TYPE_GIFT) {
@@ -74,7 +74,7 @@ class LotteryService extends BaseService
         if (!$this->getLock($lockKey, 30)) { // 30秒锁过期时间
             throw new ApiException('System busy, please try again later');
         }
-        
+
         // 随机积分 5 - 10
         $integral = mt_rand(5, 10);
 
@@ -84,11 +84,11 @@ class LotteryService extends BaseService
             // 再次检查是否已经抽过奖
             $hasLottery = LotteryOrder::where(["user_id" => $this->user_id])->findOrEmpty()->toArray();
             if (!empty($hasLottery)) {
-                
+
                 $this->releaseLock($lockKey);
                 throw new ApiException('You have already participated in the lottery');
             }
-            
+
             $transaction_id = (new Snowflake())->id();
 
             Users::where('id', $this->user_id)->update(["first_lottery" => 0]);
@@ -103,7 +103,7 @@ class LotteryService extends BaseService
             $lottery_order_model->award_integral = $integral;
             $lottery_order_model->gift_id = 0;
             $lottery_order_model->save();
-            
+
             // 清除排行榜缓存
             $this->clearCacheByTag('ranks');
 
@@ -113,14 +113,14 @@ class LotteryService extends BaseService
                 'user_tg_id' => $this->telegram_id,
                 'transaction_id' => $transaction_id,
                 'transaction_integral_amount' => $integral
-            ],commonDict::INTEGRAL_TYPE_FREE);  // 1-首次免费抽奖获得
+            ], commonDict::INTEGRAL_TYPE_FREE);  // 1-首次免费抽奖获得
 
             Db::commit();
-            
+
             $this->releaseLock($lockKey);
         } catch (\Exception $e) {
             Db::rollback();
-            
+
             $this->releaseLock($lockKey);
             Log::error('免费积分抽奖失败：' . $e->getMessage());
             throw new ApiException('Lottery failed');
@@ -156,7 +156,7 @@ class LotteryService extends BaseService
         if (!$this->getLock($lockKey, 30)) { // 30秒锁过期时间
             throw new ApiException('System busy, please try again later');
         }
-        
+
         // 记录抽奖结果
         Db::startTrans();
         try {
@@ -173,7 +173,7 @@ class LotteryService extends BaseService
                 'user_tg_id' => $this->telegram_id,
                 'transaction_id' => $transaction_id,
                 'transaction_integral_amount' => -$latteryType['pay_integral']
-            ],commonDict::INTEGRAL_TYPE_LOTTERY);
+            ], commonDict::INTEGRAL_TYPE_LOTTERY);
 
             // 获取该档位下的所有奖品
             $gifts = $this->giftService->getGiftsByType($latteryType['id']);
@@ -187,9 +187,9 @@ class LotteryService extends BaseService
             if (empty($award)) {
                 throw new ApiException('Gift not found');
             }
-            
+
             $lottery_order_model = new LotteryOrder();
-            
+
             $lottery_order_model->user_id = $this->user_id;
             $lottery_order_model->user_tg_id = $this->telegram_id;
             $lottery_order_model->pay_integral = $latteryType['pay_integral'];
@@ -197,37 +197,40 @@ class LotteryService extends BaseService
             $lottery_order_model->lottery_type_id = $latteryType['id'];
             $lottery_order_model->award_type = $award['award_type'];
 
-            if($award['award_type'] == lotteryDict::AWARD_TYPE_GIFT){
+            if ($award['award_type'] == lotteryDict::AWARD_TYPE_GIFT) {
                 $lottery_order_model->gift_id = $award['id'];
                 $lottery_order_model->gift_tg_id = $award['gift_tg_id'];
                 $lottery_order_model->gift_is_limit = $award['is_limit'];
                 $lottery_order_model->award_star = $award['star_price'];
-            }else{
+
+                // 清除用户礼物列表缓存
+                $this->clearCacheByTag('user_gifts:' . $this->user_id);
+            } else {
                 $lottery_order_model->award_integral = $award['integral_price'];
             }
 
             $lottery_order_model->save();
-            
+
             // 清除排行榜缓存
             $this->clearCacheByTag('ranks');
 
-            if($award['integral_price'] > 0){
+            if ($award['integral_price'] > 0) {
                 $this->addIntergralRecord([
                     'user_id' => $this->user_id,
                     'user_tg_id' => $this->telegram_id,
                     'transaction_id' => $transaction_id,
                     'transaction_integral_amount' => $award['integral_price'],
-                ],commonDict::INTEGRAL_TYPE_LOTTERY_AWARD);
+                ], commonDict::INTEGRAL_TYPE_LOTTERY_AWARD);
             }
 
             $award['lottery_id'] = $lottery_order_model->id;
 
             Db::commit();
-            
+
             $this->releaseLock($lockKey);
         } catch (\Exception $e) {
             Db::rollback();
-            
+
             $this->releaseLock($lockKey);
             Log::error('【积分抽奖失败】：' . $e->getMessage());
             throw new ApiException('Lottery failed');
@@ -289,27 +292,41 @@ class LotteryService extends BaseService
      */
     public function getUserGifts($is_limit = false)
     {
-        $where = [["award_status", "=", 0], ["user_id", "=", $this->user_id], ["gift_id", "<>", 0]];
-        if ($is_limit) {
-            array_push($where, ["gift_is_limit", "=", 1]);
-        }
-        $user_gifts_model = LotteryOrder::where($where)
-            ->with(['gifts'])
-            ->order('create_time', 'desc')
-            ->field('id,user_id,user_tg_id,gift_id,gift_tg_id,award_star');
-        $list = $this->pageQuery($user_gifts_model);
-        return $list;
+        // 构建缓存键，包含用户ID、是否限量标志和分页参数
+        $page_params = $this->getPageParam();
+        $cache_key = 'user_gifts:' . $this->user_id . ':' . ($is_limit ? 'limit' : 'all') . ':' . $page_params['page'] . ':' . $page_params['limit'];
+
+        // 使用缓存，过期时间设为10分钟，使用用户ID作为标签便于清除
+        return $this->getCache($cache_key, function () use ($is_limit) {
+            $where = [["award_status", "=", 0], ["award_type", "=", lotteryDict::AWARD_TYPE_GIFT], ["user_id", "=", $this->user_id], ["gift_id", "<>", 0]];
+            if ($is_limit) {
+                array_push($where, ["gift_is_limit", "=", 1]);
+            }
+            $user_gifts_model = LotteryOrder::where($where)
+                ->with(['gifts'])
+                ->order('create_time', 'desc')
+                ->field('id,user_id,user_tg_id,gift_id,gift_tg_id,award_star');
+            $list = $this->pageQuery($user_gifts_model);
+            return $list;
+        }, 600, 'user_gifts:' . $this->user_id);
     }
 
     public function getUserAllGifts()
     {
-        $user_limit_gifts = $this->getUserGifts(is_limit: true);
-        $user_all_gifts = $this->getUserGifts(is_limit: false);
+        // 构建缓存键，包含用户ID和分页参数
+        $page_params = $this->getPageParam();
+        $cache_key = 'user_all_gifts:' . $this->user_id . ':' . $page_params['page'] . ':' . $page_params['limit'];
 
-        return [
-            "limit_gifts" => $user_limit_gifts,
-            "all_gifts" => $user_all_gifts
-        ];
+        // 使用缓存，过期时间设为10分钟，使用用户ID作为标签便于清除
+        return $this->getCache($cache_key, function () {
+            $user_limit_gifts = $this->getUserGifts(is_limit: true);
+            $user_all_gifts = $this->getUserGifts(is_limit: false);
+
+            return [
+                "limit_gifts" => $user_limit_gifts,
+                "all_gifts" => $user_all_gifts
+            ];
+        }, 600, 'user_gifts:' . $this->user_id);
     }
 
     /**
@@ -335,13 +352,13 @@ class LotteryService extends BaseService
         if (empty($order_info)) {
             throw new ApiException('Not found');
         }
-        
+
         // 获取Redis锁，防止重复兑换礼物
         $lockKey = 'gift_exchange:' . $this->user_id . ':' . $id;
         if (!$this->getLock($lockKey, 30)) { // 30秒锁过期时间
             throw new ApiException('System busy, please try again later');
         }
-        
+
         try {
             // 再次检查订单状态，确保未被兑换
             $current_order = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
@@ -351,14 +368,14 @@ class LotteryService extends BaseService
                 $this->releaseLock($lockKey);
                 throw new ApiException('Gift already exchanged or not found');
             }
-            
+
             $this->sendGiftToUser($order_info['user_tg_id'], $order_info['gift_tg_id']);
             LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
                 ->update(['award_status' => commonDict::AWARD_STATUS_TO_GIFT, 'award_time' => time()]);
-                
+
             $this->releaseLock($lockKey);
         } catch (\Exception $e) {
-            
+
             $this->releaseLock($lockKey);
             LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
                 ->update(['award_error_remark' => $e->getMessage()]);
@@ -379,13 +396,13 @@ class LotteryService extends BaseService
         if (empty($order_info)) {
             throw new ApiException('Not found');
         }
-        
+
         // 获取Redis锁，防止重复兑换积分
         $lockKey = 'gift_to_integral:' . $this->user_id . ':' . $id;
         if (!$this->getLock($lockKey, 30)) { // 30秒锁过期时间
             throw new ApiException('System busy, please try again later');
         }
-        
+
         try {
             // 再次检查订单状态，确保未被兑换
             $current_order = LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
@@ -395,7 +412,7 @@ class LotteryService extends BaseService
                 $this->releaseLock($lockKey);
                 throw new ApiException('Gift already exchanged or not found');
             }
-            
+
             LotteryOrder::where(["user_id" => $this->user_id, "id" => $id, 'award_status' => 0])
                 ->update(['award_status' => commonDict::AWARD_STATUS_TO_INTEGRAL, 'award_time' => time()]);
             // 记录积分变动
@@ -404,12 +421,12 @@ class LotteryService extends BaseService
                 'user_tg_id' => $this->telegram_id,
                 'transaction_id' => $order_info['order_uuid'],
                 'transaction_integral_amount' => $order_info['award_star'],
-            ],commonDict::INTEGRAL_TYPE_GIFT);
-            
-            
+            ], commonDict::INTEGRAL_TYPE_GIFT);
+
+
             $this->releaseLock($lockKey);
         } catch (\Exception $e) {
-            
+
             $this->releaseLock($lockKey);
             Log::error('【礼物兑换积分失败】：' . $e->getMessage());
             throw new ApiException('Gift to integral exchange failed');
